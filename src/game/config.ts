@@ -284,5 +284,5 @@ export const BODY = {
   /** Extra energy drain per game hour when not at a healthy weight. */
   unhealthyEnergyDrainPerHour: 1.5,
   /** Visual body width at the extremes of BMI (1 = model as authored). */
-  widthAtBmi: { low: 15, lowScale: 0.9, high: 40, highScale: 1.4 },
+  widthAtBmi: { low: 15, lowScale: 0.88, high: 40, highScale: 1.6 },
 } as const;
