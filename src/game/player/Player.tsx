@@ -12,6 +12,8 @@ import {
 import * as THREE from 'three';
 import { modelUrl } from '../../lib/assets';
 import { INPUT, PHYSICS, PLAYER, PLAYER_ANIMATIONS } from '../config';
+import { useGame } from '../store/game';
+import { vehicleState } from '../vehicles/vehicleState';
 import { consumePress, input, readMove } from '../systems/input';
 import {
   ANIMATION_SOURCE,
@@ -74,6 +76,21 @@ export function Player() {
     if (!rb || !col) return;
     const dt = PHYSICS.timeStep;
     const m = motion.current;
+
+    // While driving, the character is parked out of the simulation.
+    if (useGame.getState().mode === 'driving') {
+      if (rb.isEnabled()) rb.setEnabled(false);
+      return;
+    }
+    if (!rb.isEnabled()) rb.setEnabled(true);
+    if (playerState.teleport) {
+      rb.setTranslation(playerState.teleport, true);
+      rb.setNextKinematicTranslation(playerState.teleport);
+      m.velocity.set(0, 0, 0);
+      playerState.velocity.set(0, 0, 0);
+      playerState.teleport = null;
+      return;
+    }
 
     // Target horizontal velocity from input, relative to the camera.
     const move = readMove();
@@ -166,7 +183,9 @@ export function Player() {
   useEffect(() => {
     // Debug hook for inspecting animation state from devtools / automated checks.
     if (new URLSearchParams(window.location.search).has('debug')) {
-      Object.assign(window, { __player: { character, anim, cameraState, playerState } });
+      Object.assign(window, {
+        __player: { character, anim, cameraState, playerState, vehicleState, game: useGame },
+      });
     }
     playerState.object = visual.current;
     playerState.bodyHandle = body.current?.handle ?? -1;
@@ -176,6 +195,7 @@ export function Player() {
   }, [character, anim]);
 
   useFrame((_, dt) => {
+    if (visual.current) visual.current.visible = useGame.getState().mode !== 'driving';
     const v = playerState.velocity;
     const flat = Math.hypot(v.x, v.z);
     const airborne = !playerState.grounded && motion.current.airTime > 0.15;

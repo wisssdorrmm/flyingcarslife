@@ -8,7 +8,10 @@ import { Player } from './player/Player';
 import { ThirdPersonCamera } from './player/ThirdPersonCamera';
 import { useSettings } from './store/settings';
 import { DesktopInput } from './systems/DesktopInput';
+import { ChaseCamera } from './vehicles/ChaseCamera';
+import { DrivableCar } from './vehicles/DrivableCar';
 import { ParkedCars } from './vehicles/ParkedCars';
+import { PLAYER_CAR } from './vehicles/parkedLayout';
 import { Buildings } from './world/Buildings';
 import { DebugCamera } from './world/DebugCamera';
 import { Fixtures } from './world/Fixtures';
@@ -68,9 +71,11 @@ export default function Game() {
           <Fixtures />
           <Props />
           <ParkedCars />
+          <DrivableCar {...PLAYER_CAR} />
           <WorldColliders />
           {!freecam && <Player />}
           {!freecam && <ThirdPersonCamera />}
+          {!freecam && <ChaseCamera />}
           {debug && <PhysicsProbe />}
         </Physics>
         <PostFX />

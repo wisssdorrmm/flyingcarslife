@@ -3,6 +3,7 @@ import { useFrame, useThree } from '@react-three/fiber';
 import { useRapier } from '@react-three/rapier';
 import * as THREE from 'three';
 import { CAMERA } from '../config';
+import { useGame } from '../store/game';
 import { consumeLook } from '../systems/input';
 import { cameraState, playerState } from './playerState';
 
@@ -36,7 +37,7 @@ export function ThirdPersonCamera() {
 
   useFrame((_, dt) => {
     const player = playerState.object;
-    if (!player) return;
+    if (!player || useGame.getState().mode !== 'onFoot') return;
 
     const look = consumeLook();
     cameraState.yaw -= look.x;

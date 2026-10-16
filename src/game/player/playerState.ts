@@ -17,6 +17,8 @@ export const playerState = {
   bodyHandle: -1,
   velocity: new THREE.Vector3(),
   grounded: true,
+  /** Set to move the player instantly (e.g. stepping out of a car); consumed by <Player>. */
+  teleport: null as THREE.Vector3 | null,
 };
 
 /** Camera-relative forward and right vectors on the ground plane for the current yaw. */

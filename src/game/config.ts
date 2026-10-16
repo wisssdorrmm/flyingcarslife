@@ -198,3 +198,63 @@ export const INPUT = {
   /** Joystick deflection (0–1) above which the player runs instead of walks. */
   joystickRunThreshold: 0.6,
 } as const;
+
+/** Flying Car EV handling. Forces in newtons, masses in kg, angles in radians. */
+export const VEHICLE = {
+  /** Body mass, plus a low battery-pack mass that keeps the center of gravity down. */
+  bodyMass: 900,
+  batteryMass: 850,
+  /** All-wheel drive split: share of engine force sent to the rear axle. */
+  rearBias: 0.6,
+  maxEngineForce: 8500,
+  reverseForce: 3200,
+  brakeForce: 45,
+  handbrakeForce: 90,
+  /** Rolling + aerodynamic resistance: F = rolling + drag * v². */
+  rollingResistance: 120,
+  aeroDrag: 0.42,
+  maxSteer: 0.55,
+  /** Steering is reduced to this fraction at highSpeedSteerAt (m/s). */
+  highSpeedSteerFactor: 0.35,
+  highSpeedSteerAt: 35,
+  /** How fast the wheels turn toward the requested angle (rad/s). */
+  steerRate: 2.6,
+  wheelRadius: 0.36,
+  suspensionRestLength: 0.22,
+  suspensionStiffness: 32,
+  suspensionCompression: 3.2,
+  suspensionRelaxation: 4.2,
+  maxSuspensionTravel: 0.2,
+  maxSuspensionForce: 60000,
+  frictionSlip: 2.2,
+  /** Rear grip multiplier while the handbrake is held (lets the tail slide). */
+  handbrakeGrip: 0.45,
+  sideFrictionStiffness: 1,
+  /** Range on a full battery at steady throttle, in real seconds of full-throttle driving. */
+  batteryFullThrottleSeconds: 720,
+  /** Collision impulses (N·s) below this don't damage the car. */
+  damageThreshold: 6000,
+  /** Damage per N·s above the threshold (damage runs 0–100). */
+  damagePerImpulse: 0.0012,
+  /** At 100 damage: engine force multiplier and a constant steering pull (rad). */
+  damagedEngineFactor: 0.45,
+  damagedSteerPull: 0.08,
+  /** How close (m) the player must be to the driver door to get in. */
+  enterDistance: 2.2,
+} as const;
+
+export const CHASE_CAMERA = {
+  distance: 6.2,
+  height: 1.9,
+  lookHeight: 1.1,
+  /** Camera position follow stiffness (1/s); higher = tighter. */
+  stiffness: 6,
+  fovBase: 60,
+  fovAtSpeed: 72,
+  fovSpeed: 45,
+  /** Seconds after manual look input before the camera swings back behind the car. */
+  recenterDelay: 1.6,
+} as const;
+
+/** Speed units for the HUD: 'mph' (US setting) or 'kmh'. */
+export const HUD_UNITS: 'mph' | 'kmh' = 'mph';
