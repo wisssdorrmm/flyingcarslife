@@ -5,6 +5,7 @@ import { CuboidCollider, Physics, RigidBody, type RapierRigidBody } from '@react
 import * as THREE from 'three';
 import { PHYSICS, WORLD_LIGHTING } from './config';
 import { useSettings } from './store/settings';
+import { ParkedCars } from './vehicles/ParkedCars';
 import { Buildings } from './world/Buildings';
 import { DebugCamera } from './world/DebugCamera';
 import { Fixtures } from './world/Fixtures';
@@ -47,6 +48,7 @@ export default function Game() {
         <Buildings />
         <Fixtures />
         <Props />
+        <ParkedCars />
         <PostFX />
       </Suspense>
 

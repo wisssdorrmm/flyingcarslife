@@ -47,7 +47,6 @@ const PROPS = {
   },
   utilityBox: { model: 'utility_box_01' },
   manhole: { model: 'water_manhole_cover' },
-  coveredCar: { model: 'covered_car' },
   tree: { model: 'tree_small_02' },
 } satisfies Record<string, PropDef>;
 
@@ -62,7 +61,6 @@ function propPlacements(): Record<PropName, THREE.Matrix4[]> {
     bench: [],
     utilityBox: [],
     manhole: [],
-    coveredCar: [],
     tree: [],
   };
 
@@ -91,8 +89,6 @@ function propPlacements(): Record<PropName, THREE.Matrix4[]> {
   }
   out.utilityBox.push(placement(CH + 3.2, Y, -(MH + 3.6), Math.PI / 2));
   out.manhole.push(placement(-1.8, 0.005, 26, 0));
-  // Parked in the eastbound parking lane.
-  out.coveredCar.push(placement(-24, 0, MH - LAYOUT.mainLanes.parking / 2, Math.PI / 2));
   return out;
 }
 
