@@ -239,8 +239,8 @@ export const VEHICLE = {
   /** At 100 damage: engine force multiplier and a constant steering pull (rad). */
   damagedEngineFactor: 0.45,
   damagedSteerPull: 0.08,
-  /** How close (m) the player must be to the driver door to get in. */
-  enterDistance: 2.2,
+  /** How close (m) the player must be to any side of the car's body to get in. */
+  enterDistance: 3,
 } as const;
 
 export const CHASE_CAMERA = {

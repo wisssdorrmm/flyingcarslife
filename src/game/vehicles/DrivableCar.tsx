@@ -26,8 +26,12 @@ interface Props extends CarLook {
   heading: number;
 }
 
-/** Driver door point in the car's frame (left side, by the front seat). */
-const DOOR_POINT = new THREE.Vector3(1.25, 0, 0.35);
+/** Door points in the car's frame, by the front seats (+x = driver/left side). */
+const DRIVER_DOOR = new THREE.Vector3(1.25, 0, 0.35);
+const PASSENGER_DOOR = new THREE.Vector3(-1.25, 0, 0.35);
+/** Body footprint in the car's frame, for "close enough to get in" checks. */
+const BODY_HALF = { x: 0.95, z: 2.2 };
+const BODY_CENTER_Z = 0.24;
 const HUD_INTERVAL = 0.1;
 /**
  * Rapier scales suspension force by chassis mass, so each wheel compresses by g / (4·stiffness) at
@@ -57,6 +61,8 @@ export function DrivableCar({ id, position, heading, paint }: Props) {
     doorTimer: 0,
     hudTimer: 0,
     ownsPrompt: false,
+    /** Which side the player got in on (+1 driver, −1 passenger); they get out the same side. */
+    entrySide: 1,
   });
 
   useEffect(() => {
@@ -181,7 +187,13 @@ export function DrivableCar({ id, position, heading, paint }: Props) {
   };
 
   const tmp = useMemo(
-    () => ({ door: new THREE.Vector3(), player: new THREE.Vector3(), q: new THREE.Quaternion() }),
+    () => ({
+      door: new THREE.Vector3(),
+      player: new THREE.Vector3(),
+      local: new THREE.Vector3(),
+      inverse: new THREE.Matrix4(),
+      q: new THREE.Quaternion(),
+    }),
     [],
   );
 
@@ -211,11 +223,14 @@ export function DrivableCar({ id, position, heading, paint }: Props) {
     if (rig.driverDoor) rig.driverDoor.rotation.y = s.doorOpen * 1.1;
 
     root.updateWorldMatrix(true, false);
-    tmp.door.copy(DOOR_POINT).applyMatrix4(root.matrixWorld);
 
     if (game.mode === 'onFoot' && playerState.object) {
+      // Distance from the player to the car's footprint, so you can get in from either side.
       playerState.object.getWorldPosition(tmp.player);
-      const near = tmp.player.distanceTo(tmp.door) < VEHICLE.enterDistance;
+      tmp.local.copy(tmp.player).applyMatrix4(tmp.inverse.copy(root.matrixWorld).invert());
+      const dx = Math.max(Math.abs(tmp.local.x) - BODY_HALF.x, 0);
+      const dz = Math.max(Math.abs(tmp.local.z - BODY_CENTER_Z) - BODY_HALF.z, 0);
+      const near = Math.hypot(dx, dz) < VEHICLE.enterDistance && Math.abs(tmp.local.y) < 2;
       if (near) {
         if (!s.ownsPrompt) {
           game.setPrompt('drive');
@@ -223,8 +238,12 @@ export function DrivableCar({ id, position, heading, paint }: Props) {
         }
         if (consumePress('interact')) {
           s.ownsPrompt = false;
-          s.doorTarget = 1;
-          s.doorTimer = 0.9;
+          s.entrySide = tmp.local.x >= 0 ? 1 : -1;
+          // Only the driver door is rigged to open.
+          if (s.entrySide > 0) {
+            s.doorTarget = 1;
+            s.doorTimer = 0.9;
+          }
           game.enterVehicle(id);
           vehicleState.active = { id, object: root, bodyHandle: rb.handle, speed: 0 };
         }
@@ -241,16 +260,26 @@ export function DrivableCar({ id, position, heading, paint }: Props) {
 
       // Get out when nearly stopped.
       if (consumePress('interact') && Math.abs(speed) < 3) {
+        // Step out on the side the player got in.
+        tmp.door
+          .copy(s.entrySide > 0 ? DRIVER_DOOR : PASSENGER_DOOR)
+          .applyMatrix4(root.matrixWorld);
         const out = tmp.door
           .clone()
-          .add(new THREE.Vector3(0.5, 0, 0).applyQuaternion(root.getWorldQuaternion(tmp.q)));
+          .add(
+            new THREE.Vector3(0.5 * s.entrySide, 0, 0).applyQuaternion(
+              root.getWorldQuaternion(tmp.q),
+            ),
+          );
         out.y = Math.max(out.y, 0.2);
         playerState.teleport = out;
         // Keep the on-foot camera looking the way the car faces.
         const fwd = new THREE.Vector3(0, 0, 1).applyQuaternion(tmp.q);
         cameraState.yaw = Math.atan2(-fwd.x, -fwd.z);
-        s.doorTarget = 1;
-        s.doorTimer = 0.9;
+        if (s.entrySide > 0) {
+          s.doorTarget = 1;
+          s.doorTimer = 0.9;
+        }
         stopEvSound();
         vehicleState.active = null;
         game.exitVehicle();
