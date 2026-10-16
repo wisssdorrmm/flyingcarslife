@@ -121,3 +121,28 @@ export const TRAFFIC_SIGNALS = {
   yellowB: 4,
   allRedB: 2,
 } as const;
+
+/** Desktop key bindings (KeyboardEvent.code). Remappable in Phase 12. */
+export const KEYMAP = {
+  forward: ['KeyW', 'ArrowUp'],
+  back: ['KeyS', 'ArrowDown'],
+  left: ['KeyA', 'ArrowLeft'],
+  right: ['KeyD', 'ArrowRight'],
+  sprint: ['ShiftLeft', 'ShiftRight'],
+  walk: ['AltLeft', 'AltRight'],
+  jump: ['Space'],
+  flyDown: ['ControlLeft', 'ControlRight'],
+  interact: ['KeyE'],
+  attack: ['KeyF'],
+  reload: ['KeyR'],
+  phone: ['KeyP'],
+} as const;
+
+export const INPUT = {
+  /** Radians of camera rotation per pixel of mouse movement. */
+  mouseSensitivity: 0.0022,
+  /** Radians per pixel of touch drag on the look area. */
+  touchSensitivity: 0.005,
+  /** Joystick deflection (0–1) above which the player runs instead of walks. */
+  joystickRunThreshold: 0.6,
+} as const;
