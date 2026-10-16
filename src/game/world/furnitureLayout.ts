@@ -222,9 +222,13 @@ export function signBlades(): SignBlade[] {
     );
     if (!I) continue;
     const [px, pz] = arm.pole;
-    // Blades sit just below the mast arm, stacked: east–west street on top.
-    out.push({ road: I.ew, position: [px, Y + 4.55, pz], rotY: 0 });
-    out.push({ road: I.ns, position: [px, Y + 4.2, pz], rotY: Math.PI / 2 });
+    // Blades hang beside the pole (not through it), reaching toward the intersection, just
+    // below the mast arm; the east–west street on top.
+    const reach = 0.75 + 0.22;
+    const sx = Math.sign(I.x - px) || 1;
+    const sz = Math.sign(I.z - pz) || 1;
+    out.push({ road: I.ew, position: [px + sx * reach, Y + 4.55, pz], rotY: 0 });
+    out.push({ road: I.ns, position: [px, Y + 4.2, pz + sz * reach], rotY: Math.PI / 2 });
   }
   return out;
 }

@@ -19,6 +19,7 @@ import { PostFX } from './world/PostFX';
 import { Props } from './world/Props';
 import { SkyAndSun } from './world/SkyAndSun';
 import { Street } from './world/Street';
+import { StreetSigns } from './world/StreetSigns';
 import { WorldColliders } from './world/WorldColliders';
 
 const params = new URLSearchParams(window.location.search);
@@ -69,6 +70,7 @@ export default function Game() {
           <Street />
           <Buildings />
           <Fixtures />
+          <StreetSigns />
           <Props />
           <ParkedCars />
           <DrivableCar {...PLAYER_CAR} />

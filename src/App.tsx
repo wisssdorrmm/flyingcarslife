@@ -4,6 +4,7 @@ import { useSettings } from './game/store/settings';
 import { detectDevice } from './game/quality';
 import { TouchControls } from './ui/controls/TouchControls';
 import { ControlsHelp } from './ui/hud/ControlsHelp';
+import { LocationLabel } from './ui/hud/LocationLabel';
 import { Prompt } from './ui/hud/Prompt';
 import { Speedometer } from './ui/hud/Speedometer';
 import { LoadingScreen } from './ui/menus/LoadingScreen';
@@ -24,6 +25,7 @@ export default function App() {
       <Suspense fallback={null}>
         <Game />
       </Suspense>
+      <LocationLabel />
       <Prompt />
       <Speedometer />
       <LoadingScreen />
