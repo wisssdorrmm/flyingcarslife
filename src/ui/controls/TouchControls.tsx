@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { INPUT } from '../../game/config';
+import { useGame } from '../../game/store/game';
 import { addLook, input, pressAction, releaseAction } from '../../game/systems/input';
 
 const JOYSTICK_RADIUS = 56;
@@ -19,6 +20,8 @@ interface Stick {
 export function TouchControls() {
   const [stick, setStick] = useState<Stick | null>(null);
   const [sprint, setSprint] = useState(false);
+  const mode = useGame((s) => s.mode);
+  const prompt = useGame((s) => s.prompt);
   const lookId = useRef<number | null>(null);
   const lookLast = useRef({ x: 0, y: 0 });
   const stickRef = useRef<Stick | null>(null);
@@ -81,7 +84,7 @@ export function TouchControls() {
     if (e.pointerId === lookId.current) lookId.current = null;
   };
 
-  const hold = (action: 'jump') => ({
+  const hold = (action: 'jump' | 'interact') => ({
     onPointerDown: (e: React.PointerEvent) => {
       e.stopPropagation();
       pressAction(action);
@@ -110,20 +113,38 @@ export function TouchControls() {
         </div>
       )}
       <div className="touch-buttons">
-        <button
-          className={`touch-btn${sprint ? ' active' : ''}`}
-          aria-pressed={sprint}
-          onPointerDown={(e) => {
-            e.stopPropagation();
-            input.sprintToggle = !input.sprintToggle;
-            setSprint(input.sprintToggle);
-          }}
-        >
-          Sprint
-        </button>
-        <button className="touch-btn primary" {...hold('jump')}>
-          Jump
-        </button>
+        {mode === 'driving' ? (
+          <>
+            <button className="touch-btn" {...hold('interact')}>
+              Exit
+            </button>
+            <button className="touch-btn primary" {...hold('jump')}>
+              Brake
+            </button>
+          </>
+        ) : (
+          <>
+            {prompt === 'drive' && (
+              <button className="touch-btn accent" {...hold('interact')}>
+                Drive
+              </button>
+            )}
+            <button
+              className={`touch-btn${sprint ? ' active' : ''}`}
+              aria-pressed={sprint}
+              onPointerDown={(e) => {
+                e.stopPropagation();
+                input.sprintToggle = !input.sprintToggle;
+                setSprint(input.sprintToggle);
+              }}
+            >
+              Sprint
+            </button>
+            <button className="touch-btn primary" {...hold('jump')}>
+              Jump
+            </button>
+          </>
+        )}
       </div>
     </div>
   );

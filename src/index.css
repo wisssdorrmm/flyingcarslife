@@ -225,3 +225,117 @@ body,
   top: max(12px, env(safe-area-inset-top));
   bottom: auto;
 }
+
+.prompt {
+  position: absolute;
+  left: 50%;
+  bottom: max(28%, 140px);
+  transform: translateX(-50%);
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgb(10 14 20 / 0.72);
+  font-size: 14px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.prompt.subtle {
+  bottom: max(12px, env(safe-area-inset-bottom));
+  font-size: 12px;
+  opacity: 0.75;
+}
+
+kbd {
+  display: inline-block;
+  min-width: 1.6em;
+  padding: 1px 6px;
+  margin-right: 4px;
+  border: 1px solid rgb(255 255 255 / 0.4);
+  border-radius: 4px;
+  font:
+    600 12px/1.4 system-ui,
+    sans-serif;
+  text-align: center;
+}
+
+.speedometer {
+  position: absolute;
+  right: max(16px, env(safe-area-inset-right));
+  bottom: max(16px, env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 170px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: rgb(10 14 20 / 0.6);
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+
+.speed {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.speed-value {
+  font-size: 36px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.speed-unit {
+  font-size: 12px;
+  text-transform: uppercase;
+  opacity: 0.7;
+}
+
+.meter {
+  display: grid;
+  grid-template-columns: 56px 1fr 36px;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+}
+
+.meter-label,
+.meter-value {
+  opacity: 0.75;
+}
+
+.meter-value {
+  text-align: right;
+}
+
+.meter-bar {
+  height: 5px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: rgb(255 255 255 / 0.15);
+}
+
+.meter-fill {
+  height: 100%;
+  background: #6fd3a0;
+}
+
+.meter-fill.warn {
+  background: #f2b33d;
+}
+
+.meter-fill.bad {
+  background: #e5604f;
+}
+
+.touch-btn.accent {
+  background: rgb(111 211 160 / 0.55);
+}
+
+/* On phones the speedometer sits above the action buttons. */
+@media (pointer: coarse) {
+  .speedometer {
+    bottom: calc(max(24px, env(safe-area-inset-bottom)) + 96px);
+    min-width: 150px;
+  }
+}

@@ -4,6 +4,8 @@ import { useSettings } from './game/store/settings';
 import { detectDevice } from './game/quality';
 import { TouchControls } from './ui/controls/TouchControls';
 import { ControlsHelp } from './ui/hud/ControlsHelp';
+import { Prompt } from './ui/hud/Prompt';
+import { Speedometer } from './ui/hud/Speedometer';
 import { LoadingScreen } from './ui/menus/LoadingScreen';
 
 // The 3D engine is split out so the shell paints instantly while three/rapier download.
@@ -22,6 +24,8 @@ export default function App() {
       <Suspense fallback={null}>
         <Game />
       </Suspense>
+      <Prompt />
+      <Speedometer />
       <LoadingScreen />
       {showTouch && !freecam && <TouchControls />}
       <ControlsHelp freecam={freecam} />

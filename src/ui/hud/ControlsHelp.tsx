@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { detectDevice } from '../../game/quality';
+import { useGame } from '../../game/store/game';
 
 const isTouch = detectDevice().isTouch;
 
 /** Controls reminder; content depends on device and whether the free review camera is active. */
 export function ControlsHelp({ freecam }: { freecam: boolean }) {
   const [open, setOpen] = useState(true);
+  const mode = useGame((s) => s.mode);
   if (!open) {
     return (
       <button
@@ -28,6 +30,19 @@ export function ControlsHelp({ freecam }: { freecam: boolean }) {
           'Drag mouse: look · double-click: lock mouse',
           'W A S D: move · Shift: fast',
           'E / Space: up · Q / Ctrl: down',
+        ];
+  } else if (mode === 'driving') {
+    title = 'Driving';
+    lines = isTouch
+      ? [
+          'Left thumb: steer + throttle (pull back to brake/reverse)',
+          'Right side: look around',
+          'Brake: handbrake · Exit: get out',
+        ]
+      : [
+          'W: accelerate · S: brake / reverse',
+          'A D: steer · Space: handbrake',
+          'Mouse: look around · E: get out',
         ];
   } else {
     lines = isTouch
