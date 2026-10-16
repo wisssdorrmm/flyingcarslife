@@ -25,6 +25,8 @@ import {
 } from '@gltf-transform/functions';
 
 const SRC = 'assets-src/polyhaven';
+/** Extra model sources laid out as <dir>/<id>/<id>.gltf. */
+const MODEL_SOURCES = [join(SRC, 'models'), 'assets-src/khronos'];
 const OUT = 'public/assets';
 const TEXTURE_SIZES = [512, 1024, 2048] as const;
 
@@ -45,8 +47,15 @@ const MODEL_OPTIONS: Record<
     simplify?: SimplifyOptions;
     /** Modular kits: drop the showcase layout so every piece sits at its own origin. */
     zeroNodeTranslations?: boolean;
+    /** Swap images whose URI contains the key (e.g. third-party logos) for generated ones. */
+    replaceImages?: Record<string, () => Promise<Buffer>>;
   }
 > = {
+  // Khronos CarConcept → our fictional "Flying Car" brand (the source logo isn't licensed for reuse).
+  car_concept: {
+    maxTexture: 1024,
+    replaceImages: { Khronos_C: flyingCarBadge },
+  },
   // Flat wall panels are heavily over-tessellated (4.6k tris → ~200 at <1 mm error).
   modular_urban_apartments_facade: {
     maxTexture: 1024,
@@ -61,6 +70,19 @@ const MODEL_OPTIONS: Record<
   exterior_aircon_unit: { maxTexture: 512 },
 };
 const DEFAULT_MAX_TEXTURE = 1024;
+
+/** 512×128 wordmark used for the car's badge, steering emblem and license plate. */
+async function flyingCarBadge(): Promise<Buffer> {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="128" viewBox="0 0 512 128">
+    <rect width="512" height="128" fill="#0b0c0e"/>
+    <path d="M150 74 C 200 36, 312 36, 362 74" fill="none" stroke="#e8edf2" stroke-width="3" stroke-linecap="round" opacity="0.55"/>
+    <text x="256" y="78" text-anchor="middle" font-family="Helvetica Neue, Helvetica, Arial, sans-serif"
+      font-size="46" font-weight="700" letter-spacing="12" fill="#f4f6f8">FLYING CAR</text>
+    <text x="256" y="106" text-anchor="middle" font-family="Helvetica Neue, Helvetica, Arial, sans-serif"
+      font-size="13" letter-spacing="7" fill="#9aa3ad">HARBOR CITY · ELECTRIC</text>
+  </svg>`;
+  return sharp(Buffer.from(svg)).png().toBuffer();
+}
 
 async function dirs(path: string): Promise<string[]> {
   try {
@@ -111,11 +133,27 @@ async function compressModels(onlyModel?: string): Promise<void> {
   const outDir = join(OUT, 'models');
   await mkdir(outDir, { recursive: true });
 
-  for (const id of await dirs(join(SRC, 'models'))) {
+  const models = (
+    await Promise.all(
+      MODEL_SOURCES.map(async (dir) => (await dirs(dir)).map((id) => ({ dir, id }))),
+    )
+  ).flat();
+  for (const { dir, id } of models) {
     if (onlyModel && id !== onlyModel) continue;
     const opts = MODEL_OPTIONS[id] ?? {};
     const maxTex = opts.maxTexture ?? DEFAULT_MAX_TEXTURE;
-    const doc = await io.read(join(SRC, 'models', id, `${id}.gltf`));
+    const doc = await io.read(join(dir, id, `${id}.gltf`));
+    for (const [match, make] of Object.entries(opts.replaceImages ?? {})) {
+      for (const tex of doc.getRoot().listTextures()) {
+        if (tex.getURI().includes(match) || tex.getName().includes(match)) {
+          tex
+            .setImage(new Uint8Array(await make()))
+            .setMimeType('image/png')
+            .setURI(`${match}.png`);
+          console.log(`  replaced image ${match} in ${id}`);
+        }
+      }
+    }
     if (opts.zeroNodeTranslations) {
       for (const node of doc.getRoot().listNodes()) node.setTranslation([0, 0, 0]);
     }

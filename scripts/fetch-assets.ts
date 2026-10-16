@@ -5,7 +5,7 @@
  * Poly Haven API: https://api.polyhaven.com — all assets are CC0, no credit required
  * (we still list them in ASSET_CREDITS.md).
  */
-import { mkdir, writeFile, access } from 'node:fs/promises';
+import { access, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 
 const OUT = 'assets-src/polyhaven';
@@ -31,7 +31,6 @@ const TEXTURE_RES = '2k';
 const MODELS = [
   'modular_urban_apartments_facade',
   'modular_fire_escape',
-  'covered_car',
   'fire_hydrant',
   'metal_trash_can',
   'modular_street_seating',
@@ -41,6 +40,14 @@ const MODELS = [
   'tree_small_02',
 ];
 const MODEL_RES = '1k';
+
+/**
+ * Khronos glTF sample models (CC-BY 4.0 — credit in ASSET_CREDITS.md).
+ * The WEBP variant is fetched by reading the .gltf and downloading every buffer and image it references.
+ */
+const KHRONOS_BASE =
+  'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models';
+const KHRONOS_MODELS = [{ id: 'CarConcept', variant: 'glTF-WEBP', out: 'car_concept' }];
 
 interface FileRef {
   url: string;
@@ -104,6 +111,21 @@ async function fetchModel(id: string): Promise<void> {
   for (const [rel, ref] of Object.entries(entry.include)) await download(ref.url, join(dir, rel));
 }
 
+async function fetchKhronosModel(m: { id: string; variant: string; out: string }): Promise<void> {
+  const base = `${KHRONOS_BASE}/${m.id}/${m.variant}`;
+  const dir = join('assets-src/khronos', m.out);
+  const gltfPath = join(dir, `${m.out}.gltf`);
+  await download(`${base}/${m.id}.gltf`, gltfPath);
+  const gltf = JSON.parse(await readFile(gltfPath, 'utf8')) as {
+    buffers?: { uri?: string }[];
+    images?: { uri?: string }[];
+  };
+  const uris = [...(gltf.buffers ?? []), ...(gltf.images ?? [])]
+    .map((x) => x.uri)
+    .filter((u): u is string => !!u && !u.startsWith('data:'));
+  for (const uri of uris) await download(`${base}/${uri}`, join(dir, decodeURIComponent(uri)));
+}
+
 async function main(): Promise<void> {
   console.log('HDRIs');
   for (const h of HDRIS) await fetchHdri(h.id, h.res);
@@ -111,6 +133,8 @@ async function main(): Promise<void> {
   for (const t of TEXTURES) await fetchTexture(t);
   console.log('Models');
   for (const m of MODELS) await fetchModel(m);
+  console.log('Khronos models');
+  for (const m of KHRONOS_MODELS) await fetchKhronosModel(m);
   console.log('Done →', OUT);
 }
 
