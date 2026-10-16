@@ -78,7 +78,59 @@ export const PLAYER = {
   walkSpeed: 1.6,
   runSpeed: 3.8,
   sprintSpeed: 6.2,
-  jumpVelocity: 5,
+  jumpVelocity: 3.6,
+  /** Character height in meters (the model is scaled to this). */
+  height: 1.72,
+  capsuleRadius: 0.3,
+  /** Half the cylinder part of the capsule; total height = 2 * (halfHeight + radius). */
+  capsuleHalfHeight: 0.56,
+  /** Ground acceleration toward the target speed (m/s²) and air control fraction. */
+  acceleration: 22,
+  airControl: 0.25,
+  /** Max step the controller climbs automatically (curbs are 0.15 m). */
+  stepHeight: 0.35,
+  maxSlopeDegrees: 50,
+  /** Grace period after leaving a ledge, and how early a jump press is remembered. */
+  coyoteTime: 0.12,
+  jumpBuffer: 0.12,
+  /** Visual turn rate toward the movement direction (rad/s). */
+  turnSpeed: 12,
+  spawn: [-30, 0.2, 10.8] as [number, number, number],
+  /** Starting camera yaw: facing east down Main Street. */
+  spawnYaw: -Math.PI / 2,
+} as const;
+
+/**
+ * Animation clip names tried in order for each state. Drop-in Mixamo exports just need their clip
+ * names listed here. `natural` is the ground speed (m/s) the clip was authored at, used to scale
+ * playback so feet don't slide.
+ */
+export const PLAYER_ANIMATIONS = {
+  idle: { clips: ['Idle', 'idle'], natural: 0 },
+  walk: { clips: ['Walk', 'walk', 'Walking'], natural: 1.45 },
+  run: { clips: ['Run', 'run', 'Running', 'Jog'], natural: 3.9 },
+  sprint: { clips: ['Sprint', 'sprint', 'Run'], natural: 3.9 },
+  jump: { clips: ['Jump', 'jump'], natural: 0 },
+  fall: { clips: ['Fall', 'Falling', 'fall'], natural: 0 },
+} as const;
+
+export const CAMERA = {
+  fov: 60,
+  distance: 4.2,
+  minDistance: 0.8,
+  /** Orbit pivot height above the feet. */
+  pivotHeight: 1.55,
+  /** Over-the-shoulder offset to the right. */
+  shoulder: 0.45,
+  pitchMin: -0.55,
+  pitchMax: 1.2,
+  startPitch: 0.12,
+  /** Space kept between the camera and any wall it would clip into. */
+  collisionMargin: 0.3,
+  /** How fast the camera eases back out after a wall stops blocking it (m/s). */
+  returnSpeed: 4,
+  /** Vertical pivot smoothing so curb steps don't jolt the view (1/s). */
+  pivotSmoothing: 14,
 } as const;
 
 export const PHYSICS = {

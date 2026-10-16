@@ -4,7 +4,10 @@ import { Stats } from '@react-three/drei';
 import { Physics, RigidBody, type RapierRigidBody } from '@react-three/rapier';
 import * as THREE from 'three';
 import { PHYSICS, WORLD_LIGHTING } from './config';
+import { Player } from './player/Player';
+import { ThirdPersonCamera } from './player/ThirdPersonCamera';
 import { useSettings } from './store/settings';
+import { DesktopInput } from './systems/DesktopInput';
 import { ParkedCars } from './vehicles/ParkedCars';
 import { Buildings } from './world/Buildings';
 import { DebugCamera } from './world/DebugCamera';
@@ -15,13 +18,17 @@ import { SkyAndSun } from './world/SkyAndSun';
 import { Street } from './world/Street';
 import { WorldColliders } from './world/WorldColliders';
 
+const params = new URLSearchParams(window.location.search);
 /** `?debug&colliders` draws physics shapes. */
-const showColliders = new URLSearchParams(window.location.search).has('colliders');
+const showColliders = params.has('colliders');
+/** `?debug&freecam` swaps the player for the free-fly review camera. */
+const freecamRequested = params.has('freecam');
 
 /** Canvas, physics world and scene root. */
 export default function Game() {
   const quality = useSettings((s) => s.quality);
   const debug = useSettings((s) => s.debug);
+  const freecam = debug && freecamRequested;
 
   return (
     <Canvas
@@ -44,7 +51,7 @@ export default function Game() {
         attach="fog"
         args={[WORLD_LIGHTING.fogColor, WORLD_LIGHTING.fogNear, WORLD_LIGHTING.fogFar]}
       />
-      <DebugCamera />
+      {freecam ? <DebugCamera /> : <DesktopInput />}
 
       <Suspense fallback={null}>
         {/* updatePriority < 0: physics steps before default-priority frame callbacks (camera). */}
@@ -62,6 +69,8 @@ export default function Game() {
           <Props />
           <ParkedCars />
           <WorldColliders />
+          {!freecam && <Player />}
+          {!freecam && <ThirdPersonCamera />}
           {debug && <PhysicsProbe />}
         </Physics>
         <PostFX />
