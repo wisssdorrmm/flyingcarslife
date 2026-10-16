@@ -1,0 +1,14 @@
+node_modules
+dist
+*.local
+.env
+.env.*
+!.env.example
+.DS_Store
+.vercel
+*.tsbuildinfo
+
+# raw / downloaded assets (uploaded to R2, not committed)
+assets-src/
+assets-out/
+public/assets/
