@@ -3,18 +3,18 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
-import { signalColor, type SignalColor, type SignalPhase } from '../systems/trafficSignals';
+import { signalColor, type SignalColor } from '../systems/trafficSignals';
 import {
   ARM_HEIGHT,
   HEAD_CENTER,
   MAST_ARMS as ARMS,
+  type MastArm,
   streetLightPlacements,
   yawFor,
 } from './furnitureLayout';
-import { LAYOUT } from './layout';
+import { CURB_HEIGHT as Y } from './cityPlan';
 import { usePbrMaterial } from './materials';
 
-const { curbHeight: Y } = LAYOUT;
 const UP = new THREE.Vector3(0, 1, 0);
 
 function at(g: THREE.BufferGeometry, x: number, y: number, z: number): THREE.BufferGeometry {
@@ -169,48 +169,56 @@ function headGeometry(): THREE.BufferGeometry {
   return merge(parts);
 }
 
-function headMatrices(phase: SignalPhase): THREE.Matrix4[] {
-  return ARMS.filter((a) => a.phase === phase).flatMap((a) =>
-    a.heads.map((d) => {
-      const m = new THREE.Matrix4().makeRotationAxis(UP, Math.atan2(a.face[0], a.face[1]));
-      return m.setPosition(a.pole[0] + a.dir[0] * d, Y + HEAD_CENTER, a.pole[1] + a.dir[1] * d);
+interface Head {
+  matrix: THREE.Matrix4;
+  arm: MastArm;
+}
+
+function signalHeads(): Head[] {
+  return ARMS.flatMap((arm) =>
+    arm.heads.map((d) => {
+      const m = new THREE.Matrix4().makeRotationAxis(UP, Math.atan2(arm.face[0], arm.face[1]));
+      m.setPosition(arm.pole[0] + arm.dir[0] * d, Y + HEAD_CENTER, arm.pole[1] + arm.dir[1] * d);
+      return { matrix: m, arm };
     }),
   );
 }
 
+const LENS_COLORS = ['red', 'yellow', 'green'] as const;
+/** Lit lenses are pushed above 1.0 so bloom picks them up; unlit ones are dark tinted glass. */
+const LENS_LIT = 7;
+
 function TrafficSignals() {
   const paint = usePbrMaterial('metal_plate', { tileMeters: 1, color: '#3b3f42', roughness: 0.55 });
-  const { objects, lenses } = useMemo(() => {
+  const { objects, lenses, heads } = useMemo(() => {
+    const heads = signalHeads();
     const housing = new THREE.MeshStandardMaterial({ color: '#16181a', roughness: 0.6 });
-    const all = [...headMatrices('A'), ...headMatrices('B')];
     const poles = new THREE.Mesh(poleGeometry(), paint);
     poles.castShadow = poles.receiveShadow = true;
-    const heads = new THREE.InstancedMesh(headGeometry(), housing, all.length);
-    all.forEach((m, i) => heads.setMatrixAt(i, m));
-    heads.castShadow = true;
-    heads.computeBoundingSphere();
+    const housings = new THREE.InstancedMesh(headGeometry(), housing, heads.length);
+    heads.forEach((h, i) => housings.setMatrixAt(i, h.matrix));
+    housings.castShadow = true;
+    housings.computeBoundingSphere();
 
-    const lensGeo = (y: number) => new THREE.CircleGeometry(0.11, 24).translate(0, y, 0.135);
-    const lenses: { phase: SignalPhase; color: SignalColor; mat: THREE.MeshStandardMaterial }[] =
-      [];
-    const lensMeshes: THREE.InstancedMesh[] = [];
-    for (const phase of ['A', 'B'] as const) {
-      const ms = headMatrices(phase);
-      for (const color of ['red', 'yellow', 'green'] as const) {
-        const mat = new THREE.MeshStandardMaterial({
-          color: LENS_OFF[color],
-          emissive: LENS_ON[color],
-          emissiveIntensity: 0,
-          roughness: 0.2,
-        });
-        const inst = new THREE.InstancedMesh(lensGeo(LENS_Y[color]), mat, ms.length);
-        ms.forEach((m, i) => inst.setMatrixAt(i, m));
-        inst.computeBoundingSphere();
-        lenses.push({ phase, color, mat });
-        lensMeshes.push(inst);
-      }
-    }
-    return { objects: [poles, heads, ...lensMeshes], lenses };
+    // One instanced mesh per lens color; each instance's color says whether it's lit, so every
+    // intersection can run its own cycle without a material per signal.
+    const lenses = LENS_COLORS.map((color) => {
+      const geo = new THREE.CircleGeometry(0.11, 24).translate(0, LENS_Y[color], 0.135);
+      const mat = new THREE.MeshBasicMaterial({ color: '#ffffff' });
+      const inst = new THREE.InstancedMesh(geo, mat, heads.length);
+      heads.forEach((h, i) => {
+        inst.setMatrixAt(i, h.matrix);
+        inst.setColorAt(i, new THREE.Color(LENS_OFF[color]));
+      });
+      inst.computeBoundingSphere();
+      return {
+        color,
+        inst,
+        on: new THREE.Color(LENS_ON[color]).multiplyScalar(LENS_LIT),
+        off: new THREE.Color(LENS_OFF[color]),
+      };
+    });
+    return { objects: [poles, housings, ...lenses.map((l) => l.inst)], lenses, heads };
   }, [paint]);
 
   useEffect(() => () => objects.forEach((o) => o.geometry.dispose()), [objects]);
@@ -218,7 +226,11 @@ function TrafficSignals() {
   useFrame(({ clock }) => {
     const t = clock.elapsedTime;
     for (const l of lenses) {
-      l.mat.emissiveIntensity = signalColor(l.phase, t) === l.color ? 4 : 0;
+      heads.forEach((h, i) => {
+        const lit = signalColor(h.arm.phase, t + h.arm.offset) === l.color;
+        l.inst.setColorAt(i, lit ? l.on : l.off);
+      });
+      if (l.inst.instanceColor) l.inst.instanceColor.needsUpdate = true;
     }
   });
 

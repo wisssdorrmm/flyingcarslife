@@ -2,9 +2,9 @@ import { useMemo } from 'react';
 import { CuboidCollider, CylinderCollider, RigidBody } from '@react-three/rapier';
 import * as THREE from 'three';
 import { CAR_COLLIDER, PARKED } from '../vehicles/parkedLayout';
-import { buildingHeight, generateBuildings } from './buildingLayout';
+import { buildingHeight, cityBuildings } from './buildingLayout';
 import { MAST_ARMS, ARM_HEIGHT, propPlacements, streetLightPlacements } from './furnitureLayout';
-import { LAYOUT } from './layout';
+import { BLOCKS, CORNER_RADIUS, CURB_HEIGHT } from './cityPlan';
 
 type Vec3 = [number, number, number];
 
@@ -20,7 +20,7 @@ interface Cylinder {
   position: Vec3;
 }
 
-const Y = LAYOUT.curbHeight;
+const Y = CURB_HEIGHT;
 
 function decompose(m: THREE.Matrix4): { position: THREE.Vector3; rotY: number; scale: number } {
   const position = new THREE.Vector3();
@@ -46,28 +46,36 @@ export function WorldColliders() {
     const boxes: Box[] = [];
     const cylinders: Cylinder[] = [];
 
-    // Sidewalk blocks: two boxes per quadrant plus a cylinder for the rounded corner.
-    const { crossHalfWidth: CH, mainHalfWidth: MH, cornerRadius: R, streetLength: L } = LAYOUT;
+    // Sidewalk slabs: the block rectangle minus rounded corners, as two overlapping boxes
+    // (each shrunk by the corner radius on one axis) plus a cylinder or square per corner.
+    const R = CORNER_RADIUS;
     const hy = Y / 2;
-    for (const sx of [-1, 1]) {
-      for (const sz of [-1, 1]) {
-        const ax0 = CH + R;
-        boxes.push({
-          half: [(L - ax0) / 2, hy, (L - MH) / 2],
-          position: [(sx * (ax0 + L)) / 2, hy, (sz * (MH + L)) / 2],
-          rotY: 0,
-        });
-        const bz0 = MH + R;
-        boxes.push({
-          half: [R / 2, hy, (L - bz0) / 2],
-          position: [sx * (CH + R / 2), hy, (sz * (bz0 + L)) / 2],
-          rotY: 0,
-        });
-        cylinders.push({ halfHeight: hy, radius: R, position: [sx * (CH + R), hy, sz * (MH + R)] });
+    for (const b of BLOCKS) {
+      const { sx0, sx1, sz0, sz1, roads } = b;
+      const cx = (sx0 + sx1) / 2;
+      const cz = (sz0 + sz1) / 2;
+      boxes.push({
+        half: [(sx1 - sx0) / 2, hy, (sz1 - sz0) / 2 - R],
+        position: [cx, hy, cz],
+        rotY: 0,
+      });
+      boxes.push({
+        half: [(sx1 - sx0) / 2 - R, hy, (sz1 - sz0) / 2],
+        position: [cx, hy, cz],
+        rotY: 0,
+      });
+      for (const [rounded, x, z] of [
+        [!!(roads.n && roads.w), sx0 + R, sz0 + R],
+        [!!(roads.n && roads.e), sx1 - R, sz0 + R],
+        [!!(roads.s && roads.w), sx0 + R, sz1 - R],
+        [!!(roads.s && roads.e), sx1 - R, sz1 - R],
+      ] as const) {
+        if (rounded) cylinders.push({ halfHeight: hy, radius: R, position: [x, hy, z] });
+        else boxes.push({ half: [R, hy, R], position: [x, hy, z], rotY: 0 });
       }
     }
 
-    for (const b of generateBuildings()) {
+    for (const b of cityBuildings()) {
       const h = buildingHeight(b) + Y;
       boxes.push({
         half: [(b.x1 - b.x0) / 2, h / 2, (b.z1 - b.z0) / 2],

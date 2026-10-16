@@ -1,31 +1,33 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
+import { useFrame } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { modelUrl } from '../../lib/assets';
 import {
   BAY,
   buildingHeight,
   FLOOR_HEIGHT,
   WALL_HEIGHT,
-  generateBuildings,
+  cityBuildings,
   type BuildingSpec,
   type Side,
   type WallVariant,
 } from './buildingLayout';
 import { toFloatGeometry } from './instancing';
-import { LAYOUT } from './layout';
+import { CURB_HEIGHT } from './cityPlan';
 import { usePbrMaterial } from './materials';
+import { useSettings } from '../store/settings';
 
 const KIT = 'modular_urban_apartments_facade';
 const KIT_MAT = (name: string) => `${KIT}_${name}`;
 const CORE_INSET = 0.3;
-const BASE_Y = LAYOUT.curbHeight;
+const BASE_Y = CURB_HEIGHT;
 
 interface Placement {
   piece: string;
   matrix: THREE.Matrix4;
   variant: WallVariant;
-  lowDetail: boolean;
 }
 
 /** Facade frame for a footprint side: origin, run direction (local +x) and outward normal (local +z). */
@@ -63,7 +65,6 @@ function facadePlacements(b: BuildingSpec, side: Side): Placement[] {
     out.push({
       piece,
       variant: b.variant,
-      lowDetail: b.lowDetail,
       matrix: base.clone().multiply(new THREE.Matrix4().makeTranslation(u, y, 0)),
     });
 
@@ -209,19 +210,8 @@ export function Buildings() {
     [],
   );
 
-  const scene = useMemo(() => {
-    const specs = generateBuildings();
-    const group = new THREE.Group();
-    group.name = 'buildings';
-
-    // 1. Collect every kit piece placement.
-    const placements = specs.flatMap((b) => b.streetSides.flatMap((s) => facadePlacements(b, s)));
-
-    // 2. One InstancedMesh per (piece primitive, wall variant if plaster).
-    const buckets = new Map<
-      string,
-      { geo: THREE.BufferGeometry; mat: THREE.Material; mats: THREE.Matrix4[] }
-    >();
+  const blocks = useMemo(() => {
+    const specs = cityBuildings();
     // Meshopt quantization stores a dequantize transform on each node, so bake the node's
     // local matrix into piece geometry (the export pipeline zeroes the showcase layout).
     const pieceCache = new Map<
@@ -251,85 +241,158 @@ export function Buildings() {
       pieceCache.set(piece, prims);
       return prims;
     };
-    for (const p of placements) {
-      primitivesOf(p.piece).forEach((prim, idx) => {
-        const src = prim.material;
-        const isPlaster = src.name === KIT_MAT('plaster');
-        const isGlass = src.name === KIT_MAT('glass');
-        // Low-detail facades keep walls, glass and rooflines but drop frames, sills and doors.
-        if (p.lowDetail && src.name === KIT_MAT('objects')) return;
-        const key = `${p.piece}#${idx}${isPlaster ? `:${p.variant}` : ''}${p.lowDetail ? ':lod' : ''}`;
-        let bucket = buckets.get(key);
-        if (!bucket) {
-          const mat = isPlaster ? walls[p.variant].kit : isGlass ? shared.glass : src;
-          bucket = { geo: prim.geometry, mat, mats: [] };
-          buckets.set(key, bucket);
-        }
-        bucket.mats.push(p.matrix);
-      });
-    }
-    for (const { geo, mat, mats } of buckets.values()) {
-      const inst = new THREE.InstancedMesh(geo, mat, mats.length);
-      mats.forEach((m, i) => inst.setMatrixAt(i, m));
-      // The plain core boxes cast the building shadows; facade detail would double the shadow pass.
-      inst.castShadow = false;
-      inst.receiveShadow = true;
-      inst.computeBoundingSphere();
-      group.add(inst);
-    }
 
-    // 3. Building cores: dark interior behind facades, party walls elsewhere, flat roof on top.
-    for (const b of specs) {
-      const h = buildingHeight(b) - 0.2 + BASE_Y;
-      const x0 = b.x0 + (b.streetSides.includes('w') ? CORE_INSET : 0);
-      const x1 = b.x1 - (b.streetSides.includes('e') ? CORE_INSET : 0);
-      const z0 = b.z0 + (b.streetSides.includes('n') ? CORE_INSET : 0);
-      const z1 = b.z1 - (b.streetSides.includes('s') ? CORE_INSET : 0);
-      // Party walls are plain brick unless the building itself is brick.
-      const party = b.variant === 'dark_brick' ? walls.dark_brick.box : walls.red_brick.box;
-      const face = (s: Side) => (b.streetSides.includes(s) ? shared.interior : party);
-      // BoxGeometry face order: +x, −x, +y, −y, +z, −z
-      const core = new THREE.Mesh(meterBox(x1 - x0, h, z1 - z0), [
-        face('e'),
-        face('w'),
-        roof,
-        shared.interior,
-        face('s'),
-        face('n'),
-      ]);
-      // Cores start at street level so buildings beyond the sidewalks never float.
-      core.position.set((x0 + x1) / 2, h / 2, (z0 + z1) / 2);
-      core.castShadow = true;
-      core.receiveShadow = true;
-      group.add(core);
-
-      // Short wall returns hide the gap between each facade end and the inset core.
-      for (const s of b.streetSides) {
-        const { origin, rotY, length } = facadeFrame(b, s);
-        for (const u of [0.1, length - 0.1]) {
-          const ret = new THREE.Mesh(meterBox(0.2, h, CORE_INSET + 0.05), party);
-          ret.position.set(u, h / 2, -(CORE_INSET + 0.05) / 2);
-          ret.position.applyAxisAngle(new THREE.Vector3(0, 1, 0), rotY).add(origin);
-          ret.position.y = h / 2;
-          ret.rotation.y = rotY;
-          ret.castShadow = true;
-          group.add(ret);
+    /** Instanced facade pieces for a set of buildings; `lowDetail` drops frames, sills and doors. */
+    const facadeGroup = (bs: BuildingSpec[], lowDetail: boolean) => {
+      const group = new THREE.Group();
+      const buckets = new Map<
+        string,
+        { geo: THREE.BufferGeometry; mat: THREE.Material; mats: THREE.Matrix4[] }
+      >();
+      for (const b of bs) {
+        for (const side of b.streetSides) {
+          for (const p of facadePlacements(b, side)) {
+            primitivesOf(p.piece).forEach((prim, idx) => {
+              const src = prim.material;
+              if (lowDetail && src.name === KIT_MAT('objects')) return;
+              const isPlaster = src.name === KIT_MAT('plaster');
+              const isGlass = src.name === KIT_MAT('glass');
+              const key = `${p.piece}#${idx}${isPlaster ? `:${p.variant}` : ''}`;
+              let bucket = buckets.get(key);
+              if (!bucket) {
+                const mat = isPlaster ? walls[p.variant].kit : isGlass ? shared.glass : src;
+                bucket = { geo: prim.geometry, mat, mats: [] };
+                buckets.set(key, bucket);
+              }
+              bucket.mats.push(p.matrix);
+            });
+          }
         }
       }
-    }
-    return group;
+      for (const { geo, mat, mats } of buckets.values()) {
+        const inst = new THREE.InstancedMesh(geo, mat, mats.length);
+        mats.forEach((m, i) => inst.setMatrixAt(i, m));
+        // The plain core boxes cast the building shadows; facade detail would double the shadow pass.
+        inst.castShadow = false;
+        inst.receiveShadow = true;
+        inst.computeBoundingSphere();
+        group.add(inst);
+      }
+      return group;
+    };
+
+    /**
+     * Building cores for a block merged into one mesh: dark interior behind facades, brick party
+     * walls elsewhere, tar roofs. Boxes are split per face so each face can take its own material.
+     */
+    const coreMaterials = [shared.interior, walls.red_brick.box, walls.dark_brick.box, roof];
+    const coreMesh = (bs: BuildingSpec[]) => {
+      const lists: THREE.BufferGeometry[][] = coreMaterials.map(() => []);
+      const addBox = (w: number, h: number, d: number, at: THREE.Matrix4, faceMat: number[]) => {
+        const box = meterBox(w, h, d).applyMatrix4(at);
+        box.groups.forEach((g, face) => {
+          const part = new THREE.BufferGeometry();
+          for (const name of ['position', 'normal', 'uv'])
+            part.setAttribute(name, box.getAttribute(name));
+          part.setIndex(Array.from(box.index!.array).slice(g.start, g.start + g.count));
+          lists[faceMat[face]!]!.push(part);
+        });
+      };
+      for (const b of bs) {
+        const h = buildingHeight(b) - 0.2 + BASE_Y;
+        const x0 = b.x0 + (b.streetSides.includes('w') ? CORE_INSET : 0);
+        const x1 = b.x1 - (b.streetSides.includes('e') ? CORE_INSET : 0);
+        const z0 = b.z0 + (b.streetSides.includes('n') ? CORE_INSET : 0);
+        const z1 = b.z1 - (b.streetSides.includes('s') ? CORE_INSET : 0);
+        const party = b.variant === 'dark_brick' ? 2 : 1;
+        const face = (s: Side) => (b.streetSides.includes(s) ? 0 : party);
+        // BoxGeometry face order: +x, −x, +y, −y, +z, −z. Cores start at street level.
+        addBox(
+          x1 - x0,
+          h,
+          z1 - z0,
+          new THREE.Matrix4().makeTranslation((x0 + x1) / 2, h / 2, (z0 + z1) / 2),
+          [face('e'), face('w'), 3, 0, face('s'), face('n')],
+        );
+        // Short wall returns hide the gap between each facade end and the inset core.
+        for (const s of b.streetSides) {
+          const { origin, rotY, length } = facadeFrame(b, s);
+          for (const u of [0.1, length - 0.1]) {
+            const p = new THREE.Vector3(u, 0, -(CORE_INSET + 0.05) / 2)
+              .applyAxisAngle(new THREE.Vector3(0, 1, 0), rotY)
+              .add(origin);
+            const m = new THREE.Matrix4().makeRotationY(rotY).setPosition(p.x, h / 2, p.z);
+            addBox(0.2, h, CORE_INSET + 0.05, m, [party, party, party, party, party, party]);
+          }
+        }
+      }
+      const used = lists.map((l, i) => ({ l, i })).filter(({ l }) => l.length > 0);
+      const perMaterial = used.map(({ l }) => mergeGeometries(l, false)!);
+      const geo = mergeGeometries(perMaterial, true)!;
+      const mesh = new THREE.Mesh(
+        geo,
+        used.map(({ i }) => coreMaterials[i]!),
+      );
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      return mesh;
+    };
+
+    const byBlock = new Map<string, BuildingSpec[]>();
+    for (const b of specs) byBlock.set(b.blockId, [...(byBlock.get(b.blockId) ?? []), b]);
+    return [...byBlock.values()].map((bs) => {
+      const group = new THREE.Group();
+      const near = facadeGroup(bs, false);
+      const mid = facadeGroup(bs, true);
+      mid.visible = false;
+      group.add(coreMesh(bs), near, mid);
+      const bounds = {
+        x0: Math.min(...bs.map((b) => b.x0)),
+        x1: Math.max(...bs.map((b) => b.x1)),
+        z0: Math.min(...bs.map((b) => b.z0)),
+        z1: Math.max(...bs.map((b) => b.z1)),
+      };
+      return { group, near, mid, bounds };
+    });
   }, [gltf, walls, shared, roof]);
+
+  // Level of detail per block, by camera distance to the block's footprint.
+  const quality = useSettings((s) => s.quality);
+  const lastCheck = useRef(0);
+  useFrame(({ camera, clock }) => {
+    if (clock.elapsedTime - lastCheck.current < 0.2) return;
+    lastCheck.current = clock.elapsedTime;
+    const { x, z } = camera.position;
+    for (const b of blocks) {
+      const dx = Math.max(b.bounds.x0 - x, 0, x - b.bounds.x1);
+      const dz = Math.max(b.bounds.z0 - z, 0, z - b.bounds.z1);
+      const d = Math.hypot(dx, dz);
+      b.near.visible = d < quality.buildingDetailDistance;
+      b.mid.visible = !b.near.visible && d < quality.buildingMidDistance;
+    }
+  });
 
   useEffect(
     () => () => {
-      scene.traverse((o) => {
-        if ((o as THREE.Mesh).isMesh) (o as THREE.Mesh).geometry.dispose();
-      });
+      for (const b of blocks) {
+        b.group.traverse((o) => {
+          const mesh = o as THREE.Mesh;
+          // Instanced pieces share cached kit geometry; only the merged cores are owned here.
+          if (mesh.isMesh && !(mesh as THREE.InstancedMesh).isInstancedMesh)
+            mesh.geometry.dispose();
+        });
+      }
     },
-    [scene],
+    [blocks],
   );
 
-  return <primitive object={scene} />;
+  return (
+    <group name="buildings">
+      {blocks.map((b, i) => (
+        <primitive key={i} object={b.group} />
+      ))}
+    </group>
+  );
 }
 
 useGLTF.preload(modelUrl(KIT), false, true);

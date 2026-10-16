@@ -1,16 +1,21 @@
 import { useMemo } from 'react';
 import * as THREE from 'three';
-import { LAYOUT } from './layout';
+import {
+  BLOCKS,
+  CORNER_RADIUS,
+  CROSSWALK_WIDTH,
+  CURB_HEIGHT,
+  EXTENT,
+  halfWidth,
+  ROADS,
+  roadsAlong,
+  STOP_LINE_GAP,
+  type Block,
+  type Road,
+} from './cityPlan';
 import { usePbrMaterial } from './materials';
 
-const {
-  mainHalfWidth: MH,
-  crossHalfWidth: CH,
-  streetLength: L,
-  curbHeight,
-  cornerRadius: R,
-} = LAYOUT;
-/** Half-size of the ground plane under the whole block. */
+/** Half-size of the ground plane under the whole city. */
 const GROUND = 1200;
 
 /** Flat ground quad with UVs in meters, so tiled textures keep real-world scale. */
@@ -30,26 +35,31 @@ function groundQuad(x0: number, x1: number, z0: number, z1: number, y = 0): THRE
 }
 
 /**
- * One raised sidewalk block per quadrant, with a rounded corner at the intersection.
+ * Raised sidewalk slab for one block, rounded only at corners where two roads meet.
  * Extruded upward; group 0 = top/bottom (paving), group 1 = sides (curb face).
  */
-function sidewalkBlock(sx: 1 | -1, sz: 1 | -1): THREE.ExtrudeGeometry {
-  // Shape is drawn in (x, -z) and the extrusion is rotated to point up.
+function sidewalkSlab(b: Block): THREE.ExtrudeGeometry {
+  const R = CORNER_RADIUS;
+  const { sx0: x0, sx1: x1, sz0: z0, sz1: z1, roads } = b;
   const pts: THREE.Vector2[] = [];
-  const cx = sx * CH;
-  const cz = sz * MH;
-  const segments = 10;
-  for (let i = 0; i <= segments; i++) {
-    const a = (i / segments) * (Math.PI / 2);
-    const x = cx + sx * (R - R * Math.cos(a));
-    const z = cz + sz * (R - R * Math.sin(a));
-    pts.push(new THREE.Vector2(x, -z));
-  }
-  pts.push(new THREE.Vector2(sx * L, -cz));
-  pts.push(new THREE.Vector2(sx * L, -sz * L));
-  pts.push(new THREE.Vector2(cx, -sz * L));
+  const corner = (rounded: boolean, cx: number, cz: number, a0: number, px: number, pz: number) => {
+    if (!rounded) {
+      pts.push(new THREE.Vector2(px, -pz));
+      return;
+    }
+    const segments = 10;
+    for (let i = 0; i <= segments; i++) {
+      const a = a0 + (i / segments) * (Math.PI / 2);
+      pts.push(new THREE.Vector2(cx + R * Math.cos(a), -(cz + R * Math.sin(a))));
+    }
+  };
+  // Walk the outline NW → NE → SE → SW (shape space is x, −z).
+  corner(!!(roads.n && roads.w), x0 + R, z0 + R, Math.PI, x0, z0);
+  corner(!!(roads.n && roads.e), x1 - R, z0 + R, Math.PI * 1.5, x1, z0);
+  corner(!!(roads.s && roads.e), x1 - R, z1 - R, 0, x1, z1);
+  corner(!!(roads.s && roads.w), x0 + R, z1 - R, Math.PI / 2, x0, z1);
   const geo = new THREE.ExtrudeGeometry(new THREE.Shape(pts), {
-    depth: curbHeight - 0.02,
+    depth: CURB_HEIGHT - 0.02,
     bevelEnabled: true,
     bevelThickness: 0.02,
     bevelSize: 0.02,
@@ -63,47 +73,93 @@ function sidewalkBlock(sx: 1 | -1, sz: 1 | -1): THREE.ExtrudeGeometry {
 
 type Rect = [x0: number, x1: number, z0: number, z1: number];
 
-/** All lane markings as axis-aligned rectangles, split by paint color. */
+/** Converts a rectangle in road space (u along the road, v across it) to world space. */
+function roadRect(r: Road, u0: number, u1: number, v0: number, v1: number): Rect {
+  const [ua, ub] = u0 < u1 ? [u0, u1] : [u1, u0];
+  const [va, vb] = v0 < v1 ? [v0, v1] : [v1, v0];
+  return r.axis === 'x'
+    ? [ua, ub, r.coord + va, r.coord + vb]
+    : [r.coord + va, r.coord + vb, ua, ub];
+}
+
+/** Asphalt: east–west roads run the full length; north–south roads skip the crossings. */
+function roadSurfaces(): Rect[] {
+  const out: Rect[] = [];
+  for (const r of roadsAlong('x')) {
+    out.push(roadRect(r, -EXTENT, EXTENT, -halfWidth(r), halfWidth(r)));
+  }
+  for (const r of roadsAlong('z')) {
+    let u = -EXTENT;
+    for (const c of roadsAlong('x')) {
+      out.push(roadRect(r, u, c.coord - halfWidth(c), -halfWidth(r), halfWidth(r)));
+      u = c.coord + halfWidth(c);
+    }
+    out.push(roadRect(r, u, EXTENT, -halfWidth(r), halfWidth(r)));
+  }
+  return out;
+}
+
+interface Stop {
+  at: number;
+  /** Half-width of the crossing road, or −1 at a road end. */
+  half: number;
+}
+
+/** Distance from a crossing's center to where lane paint resumes. */
+const clearance = (s: Stop) => (s.half < 0 ? 0 : s.half + 0.5 + CROSSWALK_WIDTH + STOP_LINE_GAP);
+
+/** Lane markings for every road segment between intersections, split by paint color. */
 function buildMarkings(): { white: Rect[]; yellow: Rect[] } {
   const white: Rect[] = [];
   const yellow: Rect[] = [];
-  const cw = LAYOUT.crosswalkWidth;
-  const gap = LAYOUT.stopLineGap;
   const line = 0.12;
-  const mainStop = CH + 0.5 + cw + gap; // x of Main Street stop lines
-  const crossStop = MH + 0.5 + cw + gap; // z of 1st Ave stop lines
-
-  for (const s of [-1, 1]) {
-    // Main Street (along x), split either side of the intersection.
-    const [a, b] = s < 0 ? [-L, -mainStop] : [mainStop, L];
-    yellow.push([a, b, -0.2 - line / 2, -0.2 + line / 2], [a, b, 0.2 - line / 2, 0.2 + line / 2]);
-    const travel = LAYOUT.mainLanes.travel;
-    for (const side of [-1, 1]) {
-      // Parking lane edge.
-      const zp = side * travel * 2;
-      white.push([a, b, zp - 0.05, zp + 0.05]);
-      // Dashed lane divider: 3 m paint, 9 m gap (US 10 ft / 30 ft).
-      const zd = side * travel;
-      for (let x = a; x + 3 <= b; x += 12) white.push([x, x + 3, zd - line / 2, zd + line / 2]);
+  for (const r of ROADS) {
+    const hw = halfWidth(r);
+    const travel = r.laneWidth * r.lanesPerSide;
+    // Right-hand traffic: which side of the centerline you drive on when heading toward +u.
+    const rightOfPlus = r.axis === 'x' ? 1 : -1;
+    const crossings = roadsAlong(r.axis === 'x' ? 'z' : 'x');
+    const stops: Stop[] = [
+      { at: -EXTENT, half: -1 },
+      ...crossings.map((c) => ({ at: c.coord, half: halfWidth(c) })),
+      { at: EXTENT, half: -1 },
+    ];
+    for (let i = 0; i < stops.length - 1; i++) {
+      const A = stops[i]!;
+      const B = stops[i + 1]!;
+      const a = A.at + clearance(A);
+      const b = B.at - clearance(B);
+      if (b <= a) continue;
+      yellow.push(
+        roadRect(r, a, b, -0.2 - line / 2, -0.2 + line / 2),
+        roadRect(r, a, b, 0.2 - line / 2, 0.2 + line / 2),
+      );
+      for (const side of [-1, 1]) {
+        // Parking lane edge.
+        white.push(roadRect(r, a, b, side * travel - 0.05, side * travel + 0.05));
+        // Dashed lane dividers on multi-lane roads: 3 m paint, 9 m gap.
+        for (let k = 1; k < r.lanesPerSide; k++) {
+          const v = side * r.laneWidth * k;
+          for (let u = a; u + 3 <= b; u += 12) {
+            white.push(roadRect(r, u, u + 3, v - line / 2, v + line / 2));
+          }
+        }
+      }
+      // Stop bars on the lanes heading into each crossing, and crosswalks across the road.
+      for (const [S, dir] of [
+        [A, -1],
+        [B, 1],
+      ] as const) {
+        if (S.half < 0) continue;
+        const stopU = S.at - dir * clearance(S);
+        white.push(roadRect(r, stopU - 0.25, stopU + 0.25, 0, dir * rightOfPlus * travel));
+        const cw0 = S.at - dir * (S.half + 0.5);
+        const cw1 = cw0 - dir * CROSSWALK_WIDTH;
+        for (let v = -hw + 0.4; v + 0.6 <= hw - 0.3; v += 1.2) {
+          white.push(roadRect(r, cw0, cw1, v, v + 0.6));
+        }
+      }
     }
-    // Stop bar across the inbound lanes (traffic drives on the right).
-    const sx = s;
-    const inbound: [number, number] = sx < 0 ? [0, travel * 2] : [-travel * 2, 0];
-    white.push([sx * mainStop - 0.25, sx * mainStop + 0.25, inbound[0], inbound[1]]);
-    // Continental crosswalk across Main Street.
-    const x0 = sx < 0 ? -CH - 0.5 - cw : CH + 0.5;
-    for (let z = -MH + 0.4; z + 0.6 <= MH - 0.3; z += 1.2) white.push([x0, x0 + cw, z, z + 0.6]);
-
-    // 1st Avenue (along z).
-    const [c, d] = s < 0 ? [-L, -crossStop] : [crossStop, L];
-    yellow.push([-0.2 - line / 2, -0.2 + line / 2, c, d], [0.2 - line / 2, 0.2 + line / 2, c, d]);
-    const ct = LAYOUT.crossLanes.travel;
-    for (const side of [-1, 1]) white.push([side * ct - 0.05, side * ct + 0.05, c, d]);
-    // Northbound (−z) uses the east half; southbound the west half.
-    const inboundX: [number, number] = s > 0 ? [0, ct] : [-ct, 0];
-    white.push([inboundX[0], inboundX[1], s * crossStop - 0.25, s * crossStop + 0.25]);
-    const z0 = s < 0 ? -MH - 0.5 - cw : MH + 0.5;
-    for (let x = -CH + 0.4; x + 0.6 <= CH - 0.3; x += 1.2) white.push([x, x + 0.6, z0, z0 + cw]);
   }
   return { white, yellow };
 }
@@ -153,6 +209,45 @@ function makeWearTexture(): THREE.CanvasTexture {
   return tex;
 }
 
+/** Merges many geometries with the same layout into one (fewer draw calls). */
+function mergeAll(geos: THREE.BufferGeometry[]): THREE.BufferGeometry {
+  const merged = new THREE.BufferGeometry();
+  const names = ['position', 'normal', 'uv'] as const;
+  const arrays: Record<(typeof names)[number], number[]> = { position: [], normal: [], uv: [] };
+  const index: number[] = [];
+  const groups: { start: number; count: number; materialIndex: number }[] = [];
+  let vertexOffset = 0;
+  for (const g of geos) {
+    for (const n of names) {
+      const src = g.getAttribute(n).array as ArrayLike<number>;
+      const dst = arrays[n];
+      for (let k = 0; k < src.length; k++) dst.push(src[k]!);
+    }
+    const gi = g.index
+      ? Array.from(g.index.array)
+      : [...Array(g.getAttribute('position').count).keys()];
+    const base = index.length;
+    for (const i of gi) index.push(i + vertexOffset);
+    // Preserve ExtrudeGeometry's paving/curb material groups.
+    for (const grp of g.groups.length
+      ? g.groups
+      : [{ start: 0, count: gi.length, materialIndex: 0 }]) {
+      groups.push({
+        start: base + grp.start,
+        count: grp.count,
+        materialIndex: grp.materialIndex ?? 0,
+      });
+    }
+    vertexOffset += g.getAttribute('position').count;
+  }
+  merged.setAttribute('position', new THREE.Float32BufferAttribute(arrays.position, 3));
+  merged.setAttribute('normal', new THREE.Float32BufferAttribute(arrays.normal, 3));
+  merged.setAttribute('uv', new THREE.Float32BufferAttribute(arrays.uv, 2));
+  merged.setIndex(index);
+  for (const grp of groups) merged.addGroup(grp.start, grp.count, grp.materialIndex);
+  return merged;
+}
+
 export function Street() {
   const asphalt = usePbrMaterial('asphalt_02', { tileMeters: 5, normalScale: 1.2 });
   const paving = usePbrMaterial('concrete_pavement', {
@@ -165,16 +260,9 @@ export function Street() {
   const geometry = useMemo(
     () => ({
       // Asphalt only where the roads are; a wide ground plane sits under everything else.
-      roads: [groundQuad(-L, L, -MH, MH), groundQuad(-CH, CH, -L, -MH), groundQuad(-CH, CH, MH, L)],
+      roads: mergeAll(roadSurfaces().map(([x0, x1, z0, z1]) => groundQuad(x0, x1, z0, z1))),
       ground: groundQuad(-GROUND, GROUND, -GROUND, GROUND, -0.01),
-      sidewalks: (
-        [
-          [1, 1],
-          [1, -1],
-          [-1, 1],
-          [-1, -1],
-        ] as const
-      ).map(([sx, sz]) => sidewalkBlock(sx, sz)),
+      sidewalks: mergeAll(BLOCKS.map(sidewalkSlab)),
       markings: buildMarkings(),
     }),
     [],
@@ -202,15 +290,11 @@ export function Street() {
 
   return (
     <group>
-      {geometry.roads.map((g, i) => (
-        <mesh key={i} geometry={g} material={asphalt} receiveShadow />
-      ))}
+      <mesh geometry={geometry.roads} material={asphalt} receiveShadow />
       <mesh geometry={geometry.ground} material={paving} receiveShadow />
       <mesh geometry={paint.whiteGeo} material={paint.white} receiveShadow />
       <mesh geometry={paint.yellowGeo} material={paint.yellow} receiveShadow />
-      {geometry.sidewalks.map((g, i) => (
-        <mesh key={i} geometry={g} material={[paving, curb]} receiveShadow castShadow />
-      ))}
+      <mesh geometry={geometry.sidewalks} material={[paving, curb]} receiveShadow castShadow />
     </group>
   );
 }

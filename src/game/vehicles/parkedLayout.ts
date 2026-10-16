@@ -1,4 +1,4 @@
-import { LAYOUT } from '../world/layout';
+import { ROADS, halfWidth } from '../world/cityPlan';
 import type { CarLook } from './carModel';
 
 export interface ParkedCar extends CarLook {
@@ -7,7 +7,8 @@ export interface ParkedCar extends CarLook {
   heading: number;
 }
 
-const laneCenter = LAYOUT.mainHalfWidth - LAYOUT.mainLanes.parking / 2;
+const main = ROADS.find((r) => r.id === 'main')!;
+const laneCenter = halfWidth(main) - main.parking / 2;
 
 export const PARKED: ParkedCar[] = [
   // Eastbound parking lane (south side), facing east.

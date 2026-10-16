@@ -1,14 +1,13 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
+import { useFrame } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import { modelUrl } from '../../lib/assets';
 import { useSettings } from '../store/settings';
 import { propPlacements, type PropName } from './furnitureLayout';
 import { disposeGroup, extractParts, instanceParts, placement } from './instancing';
-import { LAYOUT } from './layout';
+import { CURB_HEIGHT as Y } from './cityPlan';
 import { usePbrMaterial } from './materials';
-
-const { curbHeight: Y } = LAYOUT;
 
 interface PropDef {
   model: string;
@@ -69,19 +68,62 @@ function TreePits({ trees }: { trees: THREE.Matrix4[] }) {
   return <primitive object={mesh} />;
 }
 
+/** Props are grouped into square chunks so far-away ones can be hidden cheaply. */
+const CHUNK = 60;
+/** How far (m) each prop stays visible; trees are the heaviest. */
+const VISIBLE_DISTANCE: Record<PropName, number> = {
+  tree: 120,
+  hydrant: 90,
+  trashCan: 90,
+  bench: 110,
+  utilityBox: 110,
+  manhole: 70,
+};
+
 function PropInstances({ name, matrices }: { name: PropName; matrices: THREE.Matrix4[] }) {
   const def: PropDef = PROPS[name];
   const gltf = useGLTF(modelUrl(def.model), false, true);
   // Leafy trees are the heaviest shadow casters; phones skip them.
   const tier = useSettings((s) => s.quality.tier);
   const castShadow = name !== 'tree' || tier !== 'low';
-  const group = useMemo(() => {
+  const chunks = useMemo(() => {
     const offset = def.offset ? new THREE.Matrix4().makeTranslation(...def.offset) : undefined;
     const parts = extractParts(gltf.scene, def.include, offset);
-    return instanceParts(parts, matrices, { castShadow });
+    const byChunk = new Map<string, THREE.Matrix4[]>();
+    const p = new THREE.Vector3();
+    for (const m of matrices) {
+      p.setFromMatrixPosition(m);
+      const key = `${Math.floor(p.x / CHUNK)},${Math.floor(p.z / CHUNK)}`;
+      byChunk.set(key, [...(byChunk.get(key) ?? []), m]);
+    }
+    return [...byChunk].map(([key, ms]) => {
+      const [cx, cz] = key.split(',').map(Number) as [number, number];
+      return {
+        group: instanceParts(parts, ms, { castShadow }),
+        center: new THREE.Vector2((cx + 0.5) * CHUNK, (cz + 0.5) * CHUNK),
+      };
+    });
   }, [gltf, def, matrices, castShadow]);
-  useEffect(() => () => disposeGroup(group), [group]);
-  return <primitive object={group} />;
+  useEffect(() => () => chunks.forEach((c) => disposeGroup(c.group)), [chunks]);
+
+  const last = useRef(0);
+  useFrame(({ camera, clock }) => {
+    if (clock.elapsedTime - last.current < 0.25) return;
+    last.current = clock.elapsedTime;
+    const reach = VISIBLE_DISTANCE[name] + CHUNK * 0.71;
+    for (const c of chunks) {
+      c.group.visible =
+        Math.hypot(c.center.x - camera.position.x, c.center.y - camera.position.z) < reach;
+    }
+  });
+
+  return (
+    <>
+      {chunks.map((c, i) => (
+        <primitive key={i} object={c.group} />
+      ))}
+    </>
+  );
 }
 
 export function Props() {
