@@ -12,8 +12,8 @@ interface InputState {
   move: { x: number; y: number };
   /** Held actions (from keys or touch buttons). */
   held: Set<Action>;
-  /** Actions pressed since the last consumePress(). */
-  pressed: Set<Action>;
+  /** Actions pressed recently (action → press time in ms), cleared by consumePress(). */
+  pressed: Map<Action, number>;
   /** Look delta in radians accumulated since the last consumeLook(). */
   look: { x: number; y: number };
   /** Movement analog magnitude from touch (keyboard uses 1). */
@@ -25,7 +25,7 @@ interface InputState {
 export const input: InputState = {
   move: { x: 0, y: 0 },
   held: new Set(),
-  pressed: new Set(),
+  pressed: new Map(),
   look: { x: 0, y: 0 },
   touchMove: { x: 0, y: 0, active: false },
   sprintToggle: false,
@@ -36,8 +36,11 @@ for (const [action, codes] of Object.entries(KEYMAP) as [Action, readonly string
   for (const code of codes) keyToAction.set(code, action);
 }
 
+/** A press only counts for this long, so a stray key tap can't fire much later. */
+const PRESS_WINDOW_MS = 250;
+
 export function pressAction(action: Action): void {
-  if (!input.held.has(action)) input.pressed.add(action);
+  if (!input.held.has(action)) input.pressed.set(action, performance.now());
   input.held.add(action);
 }
 
@@ -57,11 +60,11 @@ export function consumeLook(): { x: number; y: number } {
   return out;
 }
 
-/** True once per press. */
+/** True once per press, if the press happened within the last PRESS_WINDOW_MS. */
 export function consumePress(action: Action): boolean {
-  const had = input.pressed.has(action);
+  const at = input.pressed.get(action);
   input.pressed.delete(action);
-  return had;
+  return at !== undefined && performance.now() - at <= PRESS_WINDOW_MS;
 }
 
 /** Current movement vector, merging keyboard and touch joystick. Magnitude ≤ 1. */
