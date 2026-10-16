@@ -51,12 +51,17 @@ const MODEL_OPTIONS: Record<
     replaceImages?: Record<string, () => Promise<Buffer>>;
     /** Keep only skeleton + animation clips (to share clips across characters). */
     animationsOnly?: boolean;
+    /**
+     * Skip meshopt. Its quantization folds a dequantize scale into skinned meshes' inverse bind
+     * matrices, which breaks skeleton.pose() (and therefore animation retargeting).
+     */
+    skipMeshopt?: boolean;
   }
 > = {
   // Player stand-in (Mixamo character from the three.js examples).
-  michelle: { maxTexture: 1024 },
+  michelle: { maxTexture: 1024, skipMeshopt: true },
   // Only Soldier's Idle/Walk/Run clips are used; they retarget onto any Mixamo rig.
-  soldier: { animationsOnly: true },
+  soldier: { animationsOnly: true, skipMeshopt: true },
   // Khronos CarConcept → our fictional "Flying Car" brand (the source logo isn't licensed for reuse).
   car_concept: {
     maxTexture: 1024,
@@ -182,8 +187,8 @@ async function compressModels(onlyModel?: string): Promise<void> {
     }
     transforms.push(
       textureCompress({ encoder: sharp, targetFormat: 'webp', resize: [maxTex, maxTex] }),
-      meshopt({ encoder: MeshoptEncoder, level: 'medium' }),
     );
+    if (!opts.skipMeshopt) transforms.push(meshopt({ encoder: MeshoptEncoder, level: 'medium' }));
     await doc.transform(...transforms);
     const dest = join(outDir, `${id}.glb`);
     await io.write(dest, doc);
