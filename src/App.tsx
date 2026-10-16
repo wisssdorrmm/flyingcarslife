@@ -1,14 +1,21 @@
 import { lazy, Suspense } from 'react';
 import { QUALITY_TIERS } from './game/quality';
 import { useSettings } from './game/store/settings';
-import { DebugHelp } from './ui/hud/DebugHelp';
+import { detectDevice } from './game/quality';
+import { TouchControls } from './ui/controls/TouchControls';
+import { ControlsHelp } from './ui/hud/ControlsHelp';
 import { LoadingScreen } from './ui/menus/LoadingScreen';
 
 // The 3D engine is split out so the shell paints instantly while three/rapier download.
 const Game = lazy(() => import('./game/Game'));
 
+const params = new URLSearchParams(window.location.search);
+/** Touch UI on touch devices, or anywhere with `?touch` (for testing). */
+const showTouch = detectDevice().isTouch || params.has('touch');
+
 export default function App() {
   const debug = useSettings((s) => s.debug);
+  const freecam = debug && params.has('freecam');
 
   return (
     <div className="app">
@@ -16,7 +23,8 @@ export default function App() {
         <Game />
       </Suspense>
       <LoadingScreen />
-      <DebugHelp />
+      {showTouch && !freecam && <TouchControls />}
+      <ControlsHelp freecam={freecam} />
       {debug && <DebugPanel />}
     </div>
   );

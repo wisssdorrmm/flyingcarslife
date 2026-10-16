@@ -159,3 +159,69 @@ body,
   background: #e8edf2;
   color: #0b0f14;
 }
+
+.touch-layer {
+  position: absolute;
+  inset: 0;
+  touch-action: none;
+}
+
+.joystick {
+  position: absolute;
+  width: 112px;
+  height: 112px;
+  margin: -56px 0 0 -56px;
+  border: 2px solid rgb(255 255 255 / 0.35);
+  border-radius: 50%;
+  background: rgb(10 14 20 / 0.25);
+  pointer-events: none;
+}
+
+.joystick-knob {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 48px;
+  height: 48px;
+  margin: -24px 0 0 -24px;
+  border-radius: 50%;
+  background: rgb(232 237 242 / 0.8);
+}
+
+.touch-buttons {
+  position: absolute;
+  right: max(16px, env(safe-area-inset-right));
+  bottom: max(24px, env(safe-area-inset-bottom));
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+}
+
+.touch-btn {
+  width: 64px;
+  height: 64px;
+  border: 2px solid rgb(255 255 255 / 0.35);
+  border-radius: 50%;
+  background: rgb(10 14 20 / 0.45);
+  color: #e8edf2;
+  font:
+    600 12px/1 system-ui,
+    sans-serif;
+  touch-action: none;
+}
+
+.touch-btn.primary {
+  width: 78px;
+  height: 78px;
+}
+
+.touch-btn.active {
+  background: rgb(124 196 255 / 0.55);
+}
+
+/* On phones the bottom corners belong to the joystick and action buttons. */
+.help-panel.top,
+.help-toggle.top {
+  top: max(12px, env(safe-area-inset-top));
+  bottom: auto;
+}
