@@ -8,6 +8,7 @@ import { Player } from './player/Player';
 import { ThirdPersonCamera } from './player/ThirdPersonCamera';
 import { useSettings } from './store/settings';
 import { DesktopInput } from './systems/DesktopInput';
+import { LifeSystem } from './systems/LifeSystem';
 import { ChaseCamera } from './vehicles/ChaseCamera';
 import { DrivableCar } from './vehicles/DrivableCar';
 import { ParkedCars } from './vehicles/ParkedCars';
@@ -56,6 +57,7 @@ export default function Game() {
         args={[WORLD_LIGHTING.fogColor, WORLD_LIGHTING.fogNear, WORLD_LIGHTING.fogFar]}
       />
       {freecam ? <DebugCamera /> : <DesktopInput />}
+      <LifeSystem />
 
       <Suspense fallback={null}>
         {/* updatePriority < 0: physics steps before default-priority frame callbacks (camera). */}

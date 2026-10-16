@@ -11,8 +11,9 @@ import {
 } from '@react-three/rapier';
 import * as THREE from 'three';
 import { modelUrl } from '../../lib/assets';
-import { INPUT, PHYSICS, PLAYER, PLAYER_ANIMATIONS } from '../config';
+import { BODY, INPUT, PHYSICS, PLAYER, PLAYER_ANIMATIONS } from '../config';
 import { useGame } from '../store/game';
+import { bmiOf, movementFactors, useLife } from '../store/life';
 import { vehicleState } from '../vehicles/vehicleState';
 import { consumePress, input, readMove } from '../systems/input';
 import {
@@ -98,14 +99,16 @@ export function Player() {
     const walking =
       input.held.has('walk') ||
       (input.touchMove.active && move.magnitude < INPUT.joystickRunThreshold);
+    // Body weight and tiredness slow you down (see BODY.movement / NEEDS).
+    const [runF, sprintF, jumpF] = movementFactors();
     const speed =
       move.magnitude === 0
         ? 0
         : sprinting
-          ? PLAYER.sprintSpeed
+          ? PLAYER.sprintSpeed * sprintF
           : walking
             ? PLAYER.walkSpeed
-            : PLAYER.runSpeed;
+            : PLAYER.runSpeed * runF;
     const { forward, right } = cameraBasis(cameraState.yaw);
     const dir = forward.multiplyScalar(move.y).add(right.multiplyScalar(move.x));
     if (dir.lengthSq() > 1) dir.normalize();
@@ -131,7 +134,7 @@ export function Player() {
     else m.jumpBufferedFor = Math.max(0, m.jumpBufferedFor - dt);
     m.airTime = grounded ? 0 : m.airTime + dt;
     if (m.jumpBufferedFor > 0 && m.airTime <= PLAYER.coyoteTime && v.y <= 0.01) {
-      v.y = PLAYER.jumpVelocity;
+      v.y = PLAYER.jumpVelocity * jumpF;
       m.jumpBufferedFor = 0;
       m.airTime = PLAYER.coyoteTime + dt;
     }
@@ -196,6 +199,17 @@ export function Player() {
 
   useFrame((_, dt) => {
     if (visual.current) visual.current.visible = useGame.getState().mode !== 'driving';
+    // Body width follows BMI, eased so weight changes don't pop.
+    const w = BODY.widthAtBmi;
+    const bmi = bmiOf(useLife.getState().weightKg);
+    const t = THREE.MathUtils.clamp((bmi - w.low) / (w.high - w.low), 0, 1);
+    const width = THREE.MathUtils.lerp(w.lowScale, w.highScale, t * t * 0.6 + t * 0.4);
+    const body = model.current;
+    if (body) {
+      const k = 1 - Math.exp(-3 * dt);
+      body.scale.x += (width - body.scale.x) * k;
+      body.scale.z += (width - body.scale.z) * k;
+    }
     const v = playerState.velocity;
     const flat = Math.hypot(v.x, v.z);
     const airborne = !playerState.grounded && motion.current.airTime > 0.15;

@@ -14,12 +14,13 @@ export const TIME = {
 } as const;
 
 export const NEEDS = {
-  /** 0–100 scales. Drain values are per in-game hour. */
+  /** 0–100 scales. Drain values are per in-game hour. Fullness 100 = just ate, 0 = starving. */
   energyMax: 100,
   hungerMax: 100,
   energyDrainPerHour: 4,
   hungerDrainPerHour: 6,
-  /** Below this hunger, energy drains extra. */
+  moodDrainPerHour: 1,
+  /** Below this fullness, energy drains extra and mood drops. */
   hungerLowThreshold: 20,
   hungerLowExtraEnergyDrainPerHour: 3,
   /** Below this energy, movement and job pay are reduced. */
@@ -258,3 +259,30 @@ export const CHASE_CAMERA = {
 
 /** Speed units for the HUD: 'mph' (US setting) or 'kmh'. */
 export const HUD_UNITS: 'mph' | 'kmh' = 'mph';
+
+/** Body and calories. Everything is in game time (1 real second = 1 game minute). */
+export const BODY = {
+  startWeightKg: 68,
+  heightM: 1.72,
+  age: 24,
+  /** kcal burned per game minute on top of resting metabolism, by movement. */
+  activityKcalPerMinute: { walk: 4, run: 10, sprint: 14, drive: 0.4 },
+  /** Real physiology: ~7700 kcal of surplus per kg. Multiplied so changes show within play. */
+  kcalPerKg: 7700,
+  weightChangeSpeed: 5,
+  minWeightKg: 40,
+  maxWeightKg: 160,
+  /** BMI bands (WHO). */
+  bmi: { underweight: 18.5, overweight: 25, obese: 30 },
+  /** Movement multipliers by band: [run, sprint, jump]. */
+  movement: {
+    underweight: [0.95, 0.9, 0.95],
+    healthy: [1, 1, 1],
+    overweight: [0.95, 0.88, 0.9],
+    obese: [0.85, 0.72, 0.75],
+  },
+  /** Extra energy drain per game hour when not at a healthy weight. */
+  unhealthyEnergyDrainPerHour: 1.5,
+  /** Visual body width at the extremes of BMI (1 = model as authored). */
+  widthAtBmi: { low: 15, lowScale: 0.9, high: 40, highScale: 1.4 },
+} as const;

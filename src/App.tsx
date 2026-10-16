@@ -1,4 +1,5 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
+import { startAutosave } from './lib/save';
 import { QUALITY_TIERS } from './game/quality';
 import { useSettings } from './game/store/settings';
 import { detectDevice } from './game/quality';
@@ -19,6 +20,7 @@ const showTouch = detectDevice().isTouch || params.has('touch');
 export default function App() {
   const debug = useSettings((s) => s.debug);
   const freecam = debug && params.has('freecam');
+  useEffect(() => startAutosave(), []);
 
   return (
     <div className="app">
