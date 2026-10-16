@@ -21,11 +21,18 @@ const MAX_EXPORTED_TEXTURE = 2048;
  */
 export function pbrTextureUrls(
   id: string,
-  quality: Pick<QualitySettings, 'textureSize'>,
+  quality: Pick<QualitySettings, 'textureSize' | 'tier'>,
 ): { diff: string; nor: string; arm: string } {
   const size = Math.min(quality.textureSize, MAX_EXPORTED_TEXTURE);
-  const url = (map: string) => assetUrl(`textures/${id}/${map}_${size}.webp`);
-  return { diff: url('diff'), nor: url('nor'), arm: url('arm') };
+  // Roughness/AO is low-frequency and normals barely read past arm's length, so they stay
+  // at 1K below Ultra; this keeps High's first load under the 40 MB budget.
+  const detail = quality.tier === 'ultra' ? size : Math.min(size, 1024);
+  const url = (map: string, s: number) => assetUrl(`textures/${id}/${map}_${s}.webp`);
+  return {
+    diff: url('diff', size),
+    nor: url('nor', detail),
+    arm: url('arm', Math.min(size, 1024)),
+  };
 }
 
 export function modelUrl(name: string): string {
