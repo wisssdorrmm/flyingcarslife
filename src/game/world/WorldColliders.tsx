@@ -38,13 +38,34 @@ function rotateY(x: number, z: number, rot: number): [number, number] {
 }
 
 /**
- * Static collision for the block: ground, buildings, poles, props and parked cars.
- * Sidewalk curbs are trimesh colliders on the sidewalk meshes themselves (see Street).
+ * Static collision for the block: ground, raised sidewalks (real curb steps), buildings, poles,
+ * props and parked cars. Primitives only — they're cheaper and more robust than trimeshes.
  */
 export function WorldColliders() {
   const { boxes, cylinders } = useMemo(() => {
     const boxes: Box[] = [];
     const cylinders: Cylinder[] = [];
+
+    // Sidewalk blocks: two boxes per quadrant plus a cylinder for the rounded corner.
+    const { crossHalfWidth: CH, mainHalfWidth: MH, cornerRadius: R, streetLength: L } = LAYOUT;
+    const hy = Y / 2;
+    for (const sx of [-1, 1]) {
+      for (const sz of [-1, 1]) {
+        const ax0 = CH + R;
+        boxes.push({
+          half: [(L - ax0) / 2, hy, (L - MH) / 2],
+          position: [(sx * (ax0 + L)) / 2, hy, (sz * (MH + L)) / 2],
+          rotY: 0,
+        });
+        const bz0 = MH + R;
+        boxes.push({
+          half: [R / 2, hy, (L - bz0) / 2],
+          position: [sx * (CH + R / 2), hy, (sz * (bz0 + L)) / 2],
+          rotY: 0,
+        });
+        cylinders.push({ halfHeight: hy, radius: R, position: [sx * (CH + R), hy, sz * (MH + R)] });
+      }
+    }
 
     for (const b of generateBuildings()) {
       const h = buildingHeight(b) + Y;
