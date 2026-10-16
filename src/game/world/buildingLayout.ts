@@ -1,4 +1,13 @@
-import { BLOCKS, buildingOffset, END_BUILDING_DEPTH, EXTENT, ROADS, type Block } from './cityPlan';
+import * as THREE from 'three';
+import {
+  BLOCKS,
+  buildingOffset,
+  CURB_HEIGHT,
+  END_BUILDING_DEPTH,
+  EXTENT,
+  ROADS,
+  type Block,
+} from './cityPlan';
 
 /** Footprint side facing a direction: n = −z, s = +z, e = +x, w = −x. */
 export type Side = 'n' | 's' | 'e' | 'w';
@@ -21,12 +30,35 @@ export interface BuildingSpec {
   /** Upper-floor window row: '01' floor-length, '02' sill-height. */
   windowRow: '01' | '02';
   shopfront: boolean;
+  /** Set when a business/landmark occupies this building (see places/placement.ts). */
+  placeId?: string;
 }
 
 /** Facade kit module sizes (meters). */
 export const BAY = 3;
 export const FLOOR_HEIGHT = 3.5;
 export const WALL_HEIGHT = 3;
+
+/** Facade frame for a footprint side: origin, run direction (local +x) and outward normal (local +z). */
+export function facadeFrame(
+  b: Pick<BuildingSpec, 'x0' | 'x1' | 'z0' | 'z1'>,
+  side: Side,
+): { origin: THREE.Vector3; rotY: number; length: number } {
+  const y = CURB_HEIGHT;
+  switch (side) {
+    case 's':
+      return { origin: new THREE.Vector3(b.x0, y, b.z1), rotY: 0, length: b.x1 - b.x0 };
+    case 'n':
+      return { origin: new THREE.Vector3(b.x1, y, b.z0), rotY: Math.PI, length: b.x1 - b.x0 };
+    case 'e':
+      return { origin: new THREE.Vector3(b.x1, y, b.z1), rotY: Math.PI / 2, length: b.z1 - b.z0 };
+    case 'w':
+      return { origin: new THREE.Vector3(b.x0, y, b.z0), rotY: -Math.PI / 2, length: b.z1 - b.z0 };
+  }
+}
+
+/** Index of the entrance bay on a facade of `bays` bays (the middle one). */
+export const entranceBay = (bays: number) => Math.floor(bays / 2);
 
 /** Height from the building's base to the top of its roof crown. */
 export function buildingHeight(b: Pick<BuildingSpec, 'floors'>): number {

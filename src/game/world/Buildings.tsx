@@ -10,11 +10,14 @@ import {
   FLOOR_HEIGHT,
   WALL_HEIGHT,
   cityBuildings,
+  entranceBay,
+  facadeFrame,
   type BuildingSpec,
   type Side,
   type WallVariant,
 } from './buildingLayout';
 import { toFloatGeometry } from './instancing';
+import { cityPlaces } from '../places/placement';
 import { CURB_HEIGHT } from './cityPlan';
 import { usePbrMaterial } from './materials';
 import { useSettings } from '../store/settings';
@@ -28,31 +31,6 @@ interface Placement {
   piece: string;
   matrix: THREE.Matrix4;
   variant: WallVariant;
-}
-
-/** Facade frame for a footprint side: origin, run direction (local +x) and outward normal (local +z). */
-function facadeFrame(
-  b: BuildingSpec,
-  side: Side,
-): { origin: THREE.Vector3; rotY: number; length: number } {
-  switch (side) {
-    case 's':
-      return { origin: new THREE.Vector3(b.x0, BASE_Y, b.z1), rotY: 0, length: b.x1 - b.x0 };
-    case 'n':
-      return { origin: new THREE.Vector3(b.x1, BASE_Y, b.z0), rotY: Math.PI, length: b.x1 - b.x0 };
-    case 'e':
-      return {
-        origin: new THREE.Vector3(b.x1, BASE_Y, b.z1),
-        rotY: Math.PI / 2,
-        length: b.z1 - b.z0,
-      };
-    case 'w':
-      return {
-        origin: new THREE.Vector3(b.x0, BASE_Y, b.z0),
-        rotY: -Math.PI / 2,
-        length: b.z1 - b.z0,
-      };
-  }
 }
 
 /** Chooses kit pieces for every cell of one facade. */
@@ -69,7 +47,7 @@ function facadePlacements(b: BuildingSpec, side: Side): Placement[] {
     });
 
   const top = b.floors - 1;
-  const entrance = Math.floor(bays / 2);
+  const entrance = entranceBay(bays);
   for (let i = 0; i < bays; i++) {
     const u = (i + 1) * BAY; // pieces span local x ∈ [-3, 0]
     for (let f = 0; f < b.floors; f++) {
@@ -211,6 +189,8 @@ export function Buildings() {
   );
 
   const blocks = useMemo(() => {
+    // Places mark their buildings (shopfronts, landmark facades) before anything is built.
+    cityPlaces();
     const specs = cityBuildings();
     // Meshopt quantization stores a dequantize transform on each node, so bake the node's
     // local matrix into piece geometry (the export pipeline zeroes the showcase layout).

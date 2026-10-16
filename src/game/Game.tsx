@@ -4,6 +4,8 @@ import { Stats } from '@react-three/drei';
 import { Physics, RigidBody, type RapierRigidBody } from '@react-three/rapier';
 import * as THREE from 'three';
 import { PHYSICS, WORLD_LIGHTING } from './config';
+import { PlaceInteractions } from './places/PlaceInteractions';
+import { PlaceSigns } from './places/PlaceSigns';
 import { Player } from './player/Player';
 import { ThirdPersonCamera } from './player/ThirdPersonCamera';
 import { useSettings } from './store/settings';
@@ -58,6 +60,7 @@ export default function Game() {
       />
       {freecam ? <DebugCamera /> : <DesktopInput />}
       <LifeSystem />
+      {!freecam && <PlaceInteractions />}
 
       <Suspense fallback={null}>
         {/* updatePriority < 0: physics steps before default-priority frame callbacks (camera). */}
@@ -73,6 +76,7 @@ export default function Game() {
           <Buildings />
           <Fixtures />
           <StreetSigns />
+          <PlaceSigns />
           <Props />
           <ParkedCars />
           <DrivableCar {...PLAYER_CAR} />

@@ -129,6 +129,11 @@ export function TouchControls() {
                 Drive
               </button>
             )}
+            {prompt?.startsWith('place:') && (
+              <button className="touch-btn accent" {...hold('interact')}>
+                Enter
+              </button>
+            )}
             <button
               className={`touch-btn${sprint ? ' active' : ''}`}
               aria-pressed={sprint}

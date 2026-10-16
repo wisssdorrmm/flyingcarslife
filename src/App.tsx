@@ -8,6 +8,8 @@ import { ControlsHelp } from './ui/hud/ControlsHelp';
 import { LocationLabel } from './ui/hud/LocationLabel';
 import { Prompt } from './ui/hud/Prompt';
 import { Speedometer } from './ui/hud/Speedometer';
+import { StatusHud, Toasts } from './ui/hud/StatusHud';
+import { PlacePanel } from './ui/menus/PlacePanel';
 import { LoadingScreen } from './ui/menus/LoadingScreen';
 
 // The 3D engine is split out so the shell paints instantly while three/rapier download.
@@ -27,9 +29,12 @@ export default function App() {
       <Suspense fallback={null}>
         <Game />
       </Suspense>
+      <StatusHud />
       <LocationLabel />
+      <Toasts />
       <Prompt />
       <Speedometer />
+      <PlacePanel />
       <LoadingScreen />
       {showTouch && !freecam && <TouchControls />}
       <ControlsHelp freecam={freecam} />

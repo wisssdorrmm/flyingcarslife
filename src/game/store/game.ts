@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { consumePress } from '../systems/input';
 
 export type PlayerMode = 'onFoot' | 'driving';
 
@@ -14,9 +15,13 @@ interface GameState {
   mode: PlayerMode;
   /** Id of the vehicle being driven, if any. */
   vehicleId: string | null;
-  /** Context prompt such as "Press E to drive". */
+  /** Context prompt: 'drive', or 'place:<id>' near a business entrance. */
   prompt: string | null;
   vehicleHud: VehicleHud | null;
+  /** The place whose menu is open (player controls are paused while it is). */
+  openPlaceId: string | null;
+  openPlace: (id: string) => void;
+  closePlace: () => void;
   enterVehicle: (id: string) => void;
   exitVehicle: () => void;
   setPrompt: (prompt: string | null) => void;
@@ -28,6 +33,17 @@ export const useGame = create<GameState>()((set) => ({
   vehicleId: null,
   prompt: null,
   vehicleHud: null,
+  openPlaceId: null,
+  openPlace: (id) => {
+    // Give the mouse back so the menu can be clicked.
+    if (document.pointerLockElement) document.exitPointerLock();
+    set({ openPlaceId: id, prompt: null });
+  },
+  closePlace: () => {
+    // Swallow the E that closed the menu so it doesn't reopen it next frame.
+    consumePress('interact');
+    set({ openPlaceId: null });
+  },
   enterVehicle: (id) => set({ mode: 'driving', vehicleId: id, prompt: null }),
   exitVehicle: () => set({ mode: 'onFoot', vehicleId: null, vehicleHud: null }),
   setPrompt: (prompt) => set((s) => (s.prompt === prompt ? s : { prompt })),

@@ -94,7 +94,8 @@ export function Player() {
     }
 
     // Target horizontal velocity from input, relative to the camera.
-    const move = readMove();
+    // Menus (e.g. inside a shop) pause movement.
+    const move = useGame.getState().openPlaceId ? { x: 0, y: 0, magnitude: 0 } : readMove();
     const sprinting = input.held.has('sprint') || input.sprintToggle;
     const walking =
       input.held.has('walk') ||
@@ -187,7 +188,15 @@ export function Player() {
     // Debug hook for inspecting animation state from devtools / automated checks.
     if (new URLSearchParams(window.location.search).has('debug')) {
       Object.assign(window, {
-        __player: { character, anim, cameraState, playerState, vehicleState, game: useGame },
+        __player: {
+          character,
+          anim,
+          cameraState,
+          playerState,
+          vehicleState,
+          game: useGame,
+          life: useLife,
+        },
       });
     }
     playerState.object = visual.current;
