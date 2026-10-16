@@ -49,6 +49,13 @@ const KHRONOS_BASE =
   'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models';
 const KHRONOS_MODELS = [{ id: 'CarConcept', variant: 'glTF-WEBP', out: 'car_concept' }];
 
+/** Character stand-ins from the three.js examples (Mixamo rigs). */
+const THREEJS_BASE = 'https://raw.githubusercontent.com/mrdoob/three.js/r172/examples/models/gltf';
+const THREEJS_MODELS = [
+  { file: 'Michelle.glb', out: 'michelle' },
+  { file: 'Soldier.glb', out: 'soldier' },
+];
+
 interface FileRef {
   url: string;
   size: number;
@@ -135,6 +142,10 @@ async function main(): Promise<void> {
   for (const m of MODELS) await fetchModel(m);
   console.log('Khronos models');
   for (const m of KHRONOS_MODELS) await fetchKhronosModel(m);
+  console.log('three.js example models');
+  for (const m of THREEJS_MODELS) {
+    await download(`${THREEJS_BASE}/${m.file}`, join('assets-src/threejs', m.out, `${m.out}.glb`));
+  }
   console.log('Done →', OUT);
 }
 

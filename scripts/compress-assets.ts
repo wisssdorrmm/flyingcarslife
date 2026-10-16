@@ -26,7 +26,7 @@ import {
 
 const SRC = 'assets-src/polyhaven';
 /** Extra model sources laid out as <dir>/<id>/<id>.gltf. */
-const MODEL_SOURCES = [join(SRC, 'models'), 'assets-src/khronos'];
+const MODEL_SOURCES = [join(SRC, 'models'), 'assets-src/khronos', 'assets-src/threejs'];
 const OUT = 'public/assets';
 const TEXTURE_SIZES = [512, 1024, 2048] as const;
 
@@ -49,8 +49,14 @@ const MODEL_OPTIONS: Record<
     zeroNodeTranslations?: boolean;
     /** Swap images whose URI contains the key (e.g. third-party logos) for generated ones. */
     replaceImages?: Record<string, () => Promise<Buffer>>;
+    /** Keep only skeleton + animation clips (to share clips across characters). */
+    animationsOnly?: boolean;
   }
 > = {
+  // Player stand-in (Mixamo character from the three.js examples).
+  michelle: { maxTexture: 1024 },
+  // Only Soldier's Idle/Walk/Run clips are used; they retarget onto any Mixamo rig.
+  soldier: { animationsOnly: true },
   // Khronos CarConcept → our fictional "Flying Car" brand (the source logo isn't licensed for reuse).
   car_concept: {
     maxTexture: 1024,
@@ -82,6 +88,15 @@ async function flyingCarBadge(): Promise<Buffer> {
       font-size="13" letter-spacing="7" fill="#9aa3ad">HARBOR CITY · ELECTRIC</text>
   </svg>`;
   return sharp(Buffer.from(svg)).png().toBuffer();
+}
+
+async function exists(path: string): Promise<boolean> {
+  try {
+    await stat(path);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 async function dirs(path: string): Promise<string[]> {
@@ -142,7 +157,11 @@ async function compressModels(onlyModel?: string): Promise<void> {
     if (onlyModel && id !== onlyModel) continue;
     const opts = MODEL_OPTIONS[id] ?? {};
     const maxTex = opts.maxTexture ?? DEFAULT_MAX_TEXTURE;
-    const doc = await io.read(join(dir, id, `${id}.gltf`));
+    const base = join(dir, id, id);
+    const doc = await io.read((await exists(`${base}.gltf`)) ? `${base}.gltf` : `${base}.glb`);
+    if (opts.animationsOnly) {
+      for (const mesh of doc.getRoot().listMeshes()) mesh.dispose();
+    }
     for (const [match, make] of Object.entries(opts.replaceImages ?? {})) {
       for (const tex of doc.getRoot().listTextures()) {
         if (tex.getURI().includes(match) || tex.getName().includes(match)) {
