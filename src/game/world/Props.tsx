@@ -5,7 +5,13 @@ import * as THREE from 'three';
 import { modelUrl } from '../../lib/assets';
 import { useSettings } from '../store/settings';
 import { propPlacements, type PropName } from './furnitureLayout';
-import { disposeGroup, extractParts, instanceParts, placement } from './instancing';
+import {
+  disposeGroup,
+  extractParts,
+  instanceParts,
+  mergePartsByMaterial,
+  placement,
+} from './instancing';
 import { CURB_HEIGHT as Y } from './cityPlan';
 import { usePbrMaterial } from './materials';
 
@@ -69,7 +75,7 @@ function TreePits({ trees }: { trees: THREE.Matrix4[] }) {
 }
 
 /** Props are grouped into square chunks so far-away ones can be hidden cheaply. */
-const CHUNK = 60;
+const CHUNK = 110;
 /** How far (m) each prop stays visible; trees are the heaviest. */
 const VISIBLE_DISTANCE: Record<PropName, number> = {
   tree: 120,
@@ -88,7 +94,7 @@ function PropInstances({ name, matrices }: { name: PropName; matrices: THREE.Mat
   const castShadow = name !== 'tree' || tier !== 'low';
   const chunks = useMemo(() => {
     const offset = def.offset ? new THREE.Matrix4().makeTranslation(...def.offset) : undefined;
-    const parts = extractParts(gltf.scene, def.include, offset);
+    const parts = mergePartsByMaterial(extractParts(gltf.scene, def.include, offset));
     const byChunk = new Map<string, THREE.Matrix4[]>();
     const p = new THREE.Vector3();
     for (const m of matrices) {

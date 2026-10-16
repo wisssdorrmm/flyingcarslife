@@ -29,9 +29,8 @@ export interface QualitySettings {
   maxDrawCalls: number;
   /** City chunks kept loaded around the player (radius in chunks). */
   chunkRadius: number;
-  /** Blocks closer than this (m) show full facade detail; closer than mid show walls + glass. */
+  /** Blocks closer than this (m) show full facades; farther ones show window-painted shells. */
   buildingDetailDistance: number;
-  buildingMidDistance: number;
 }
 
 export const QUALITY_PRESETS: Record<QualityTier, QualitySettings> = {
@@ -52,7 +51,6 @@ export const QUALITY_PRESETS: Record<QualityTier, QualitySettings> = {
     maxDrawCalls: 300,
     chunkRadius: 1,
     buildingDetailDistance: 45,
-    buildingMidDistance: 200,
   },
   medium: {
     tier: 'medium',
@@ -71,7 +69,6 @@ export const QUALITY_PRESETS: Record<QualityTier, QualitySettings> = {
     maxDrawCalls: 500,
     chunkRadius: 2,
     buildingDetailDistance: 70,
-    buildingMidDistance: 280,
   },
   high: {
     tier: 'high',
@@ -90,7 +87,6 @@ export const QUALITY_PRESETS: Record<QualityTier, QualitySettings> = {
     maxDrawCalls: 800,
     chunkRadius: 2,
     buildingDetailDistance: 100,
-    buildingMidDistance: 380,
   },
   ultra: {
     tier: 'ultra',
@@ -109,7 +105,6 @@ export const QUALITY_PRESETS: Record<QualityTier, QualitySettings> = {
     maxDrawCalls: 1200,
     chunkRadius: 3,
     buildingDetailDistance: 140,
-    buildingMidDistance: 480,
   },
 };
 

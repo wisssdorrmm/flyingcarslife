@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 
 /**
  * Meshopt-quantized attributes are normalized integers; transforming them in place would clamp
@@ -48,6 +49,23 @@ export function extractParts(
     parts.push({ geometry, material: mesh.material as THREE.Material });
   });
   return parts;
+}
+
+/** Merges parts that share a material, so an instanced prop costs one draw call per material. */
+export function mergePartsByMaterial(parts: MeshPart[]): MeshPart[] {
+  const byMat = new Map<THREE.Material, THREE.BufferGeometry[]>();
+  for (const p of parts) byMat.set(p.material, [...(byMat.get(p.material) ?? []), p.geometry]);
+  return [...byMat].map(([material, geos]) => {
+    if (geos.length === 1) return { material, geometry: geos[0]! };
+    const keep = ['position', 'normal', 'uv'];
+    const clean = geos.map((g) => {
+      const n = g.index ? g.toNonIndexed() : g;
+      for (const name of Object.keys(n.attributes))
+        if (!keep.includes(name)) n.deleteAttribute(name);
+      return n;
+    });
+    return { material, geometry: mergeGeometries(clean) ?? geos[0]! };
+  });
 }
 
 /** Builds one InstancedMesh per part, all sharing the same per-instance transforms. */
