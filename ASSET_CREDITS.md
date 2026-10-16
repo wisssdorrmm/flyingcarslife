@@ -16,6 +16,16 @@ required; we list them anyway. Downloaded by `npm run assets:fetch`, compressed 
 | fire_hydrant, metal_trash_can, modular_street_seating, utility_box_01, water_manhole_cover, tree_small_02 | Model   | Street props                  |
 | modular_fire_escape, exterior_aircon_unit                                                                 | Model   | (downloaded, not placed yet)  |
 
+## Mixamo (Adobe) — royalty-free for use in games
+
+| Asset | Source | Used for |
+|---|---|---|
+| Michelle (Ch03) | [three.js examples](https://github.com/mrdoob/three.js/tree/r172/examples/models/gltf), originally [Mixamo](https://www.mixamo.com) | Player character stand-in |
+| Soldier — Idle, Walk, Run clips | same | Player animations (retargeted onto Michelle at load) |
+
+Swap in your own Mixamo character + clips by exporting them as GLB and listing the clip names in
+`PLAYER_ANIMATIONS` (src/game/config.ts). Jump, fall and turn clips will be used automatically once present.
+
 ## CC-BY 4.0 (attribution required)
 
 | Asset                             | Author / owner                                                                               | Source                                                                                                                                                                        | Changes                                                                                                                      |
