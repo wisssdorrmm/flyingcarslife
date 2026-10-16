@@ -1,7 +1,7 @@
 import { Suspense, useRef } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { Stats } from '@react-three/drei';
-import { CuboidCollider, Physics, RigidBody, type RapierRigidBody } from '@react-three/rapier';
+import { Physics, RigidBody, type RapierRigidBody } from '@react-three/rapier';
 import * as THREE from 'three';
 import { PHYSICS, WORLD_LIGHTING } from './config';
 import { useSettings } from './store/settings';
@@ -13,6 +13,10 @@ import { PostFX } from './world/PostFX';
 import { Props } from './world/Props';
 import { SkyAndSun } from './world/SkyAndSun';
 import { Street } from './world/Street';
+import { WorldColliders } from './world/WorldColliders';
+
+/** `?debug&colliders` draws physics shapes. */
+const showColliders = new URLSearchParams(window.location.search).has('colliders');
 
 /** Canvas, physics world and scene root. */
 export default function Game() {
@@ -43,22 +47,24 @@ export default function Game() {
       <DebugCamera />
 
       <Suspense fallback={null}>
-        <SkyAndSun />
-        <Street />
-        <Buildings />
-        <Fixtures />
-        <Props />
-        <ParkedCars />
-        <PostFX />
-      </Suspense>
-
-      <Suspense fallback={null}>
-        <Physics gravity={PHYSICS.gravity} timeStep={PHYSICS.timeStep} interpolate debug={debug}>
-          <RigidBody type="fixed" colliders={false}>
-            <CuboidCollider args={[500, 0.5, 500]} position={[0, -0.5, 0]} />
-          </RigidBody>
+        {/* updatePriority < 0: physics steps before default-priority frame callbacks (camera). */}
+        <Physics
+          gravity={PHYSICS.gravity}
+          timeStep={PHYSICS.timeStep}
+          interpolate
+          debug={debug && showColliders}
+          updatePriority={-50}
+        >
+          <SkyAndSun />
+          <Street />
+          <Buildings />
+          <Fixtures />
+          <Props />
+          <ParkedCars />
+          <WorldColliders />
           {debug && <PhysicsProbe />}
         </Physics>
+        <PostFX />
       </Suspense>
 
       {debug && <Stats />}

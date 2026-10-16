@@ -4,15 +4,18 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { signalColor, type SignalColor, type SignalPhase } from '../systems/trafficSignals';
-import { placement } from './instancing';
+import {
+  ARM_HEIGHT,
+  HEAD_CENTER,
+  MAST_ARMS as ARMS,
+  streetLightPlacements,
+  yawFor,
+} from './furnitureLayout';
 import { LAYOUT } from './layout';
 import { usePbrMaterial } from './materials';
 
-const { mainHalfWidth: MH, crossHalfWidth: CH, curbHeight: Y, streetLength } = LAYOUT;
+const { curbHeight: Y } = LAYOUT;
 const UP = new THREE.Vector3(0, 1, 0);
-
-/** Rotation about Y that points local +x along a ground direction. */
-const yawFor = (dx: number, dz: number) => Math.atan2(-dz, dx);
 
 function at(g: THREE.BufferGeometry, x: number, y: number, z: number): THREE.BufferGeometry {
   return g.translate(x, y, z);
@@ -61,19 +64,6 @@ function streetLightGeometry() {
   return { metal, lens };
 }
 
-function streetLightPlacements(): THREE.Matrix4[] {
-  const out: THREE.Matrix4[] = [];
-  for (const s of [-1, 1]) {
-    for (let d = 18; d <= streetLength - 10; d += 33) {
-      for (const side of [-1, 1]) {
-        out.push(placement(s * d, Y, side * (MH + 0.45), yawFor(0, -side)));
-        out.push(placement(side * (CH + 0.45), Y, s * (d + 4), yawFor(-side, 0)));
-      }
-    }
-  }
-  return out;
-}
-
 function StreetLights() {
   const galvanized = usePbrMaterial('metal_plate', {
     tileMeters: 1,
@@ -112,52 +102,6 @@ function StreetLights() {
 // Traffic signals: mast arms on the far side of each approach.
 // ---------------------------------------------------------------------------
 
-interface MastArm {
-  phase: SignalPhase;
-  pole: [number, number];
-  /** Ground direction the arm reaches out over the road. */
-  dir: [number, number];
-  /** Distances along the arm where signal heads hang. */
-  heads: number[];
-  /** Direction the lenses face (toward approaching traffic). */
-  face: [number, number];
-}
-
-const POLE_OFFSET = 1.7;
-const ARMS: MastArm[] = [
-  // Eastbound (+x) traffic uses the south half of Main St; signals on the far (east) side.
-  {
-    phase: 'A',
-    pole: [CH + POLE_OFFSET, MH + POLE_OFFSET],
-    dir: [0, -1],
-    heads: [5.7, 8.7],
-    face: [-1, 0],
-  },
-  {
-    phase: 'A',
-    pole: [-CH - POLE_OFFSET, -MH - POLE_OFFSET],
-    dir: [0, 1],
-    heads: [5.7, 8.7],
-    face: [1, 0],
-  },
-  // Northbound (−z) uses the east half of 1st Ave.
-  {
-    phase: 'B',
-    pole: [CH + POLE_OFFSET, -MH - POLE_OFFSET],
-    dir: [-1, 0],
-    heads: [5.1, 6.8],
-    face: [0, 1],
-  },
-  {
-    phase: 'B',
-    pole: [-CH - POLE_OFFSET, MH + POLE_OFFSET],
-    dir: [1, 0],
-    heads: [5.1, 6.8],
-    face: [0, -1],
-  },
-];
-const ARM_HEIGHT = 6.4;
-const HEAD_CENTER = 5.75;
 const LENS_Y: Record<SignalColor, number> = { red: 0.33, yellow: 0, green: -0.33 };
 const LENS_ON: Record<SignalColor, string> = {
   red: '#ff2a1a',

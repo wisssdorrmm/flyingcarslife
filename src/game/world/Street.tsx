@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { RigidBody } from '@react-three/rapier';
 import * as THREE from 'three';
 import { LAYOUT } from './layout';
 import { usePbrMaterial } from './materials';
@@ -208,9 +209,12 @@ export function Street() {
       <mesh geometry={geometry.ground} material={paving} receiveShadow />
       <mesh geometry={paint.whiteGeo} material={paint.white} receiveShadow />
       <mesh geometry={paint.yellowGeo} material={paint.yellow} receiveShadow />
-      {geometry.sidewalks.map((g, i) => (
-        <mesh key={i} geometry={g} material={[paving, curb]} receiveShadow castShadow />
-      ))}
+      {/* Trimesh colliders so curbs are real steps for the player and cars. */}
+      <RigidBody type="fixed" colliders="trimesh">
+        {geometry.sidewalks.map((g, i) => (
+          <mesh key={i} geometry={g} material={[paving, curb]} receiveShadow castShadow />
+        ))}
+      </RigidBody>
     </group>
   );
 }
