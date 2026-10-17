@@ -287,3 +287,18 @@ export const BODY = {
   /** Visual body width at the extremes of BMI (1 = model as authored). */
   widthAtBmi: { low: 15, lowScale: 0.88, high: 40, highScale: 1.6 },
 } as const;
+
+/** Online play. Rooms are copies of the city; players only see others in the same room. */
+export const NET = {
+  roomCapacity: 60,
+  /** Movement updates sent per second. */
+  stateRate: 10,
+  /** Remote players are drawn this far in the past (s) so they can be interpolated smoothly. */
+  interpolationDelay: 0.12,
+  /** A player who hasn't sent anything for this long (s) is dropped. */
+  timeout: 8,
+  /** Name tags show within this range (m). */
+  nameTagRange: 60,
+  chat: { maxLength: 140, minIntervalMs: 1000, bubbleSeconds: 6, historySize: 60 },
+  voice: { range: 25, maxPeers: 6 },
+} as const;
