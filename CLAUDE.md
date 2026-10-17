@@ -13,6 +13,8 @@
 - Includes weapons, fights, crime and a police wanted system (no gore, target rating 13+).
 - Runs in desktop and mobile browsers. No app stores.
 - Real advertisers can buy billboard space inside the city.
+- Launch link: **flyingcarslife.vercel.app**. Later domain: **flyingcarslife.surpriseme.com**.
+- Signature feature: **Rooftop Escape** — drive up a rooftop car park and take off from the roof edge in a flying car to escape ground police (see section 5).
 
 ### Non-negotiables
 - **Realistic look** comes from real PBR assets, HDRI lighting and post-processing. Never use untextured primitive boxes for visible world objects (debug only).
@@ -170,6 +172,15 @@ Target: about 2 hours of play to afford the first flying car.
 - **Knocked out**: wake at hospital, pay bill.
 - Criminal record blocks air taxi job and some purchases until it clears.
 
+### Rooftop Escape (signature feature)
+- Multi-level rooftop car parks and building ramps across Downtown that cars can drive up.
+- At 1–3 wanted stars, the player can drive up a ramp and take off from the roof edge in a flying car to escape ground police.
+- Ground police chase up the ramps and stop at the roof edge (they cannot follow into the air).
+- Taking off during a chase adds +1 star only if the player then flies through a no-fly zone or outside sky lanes.
+- At 4+ stars, police helicopters and air units follow the player into the sky.
+- Smooth take-off from a moving car: thrusters ignite at speed, wheels fold, the car keeps its momentum off the edge.
+- Built across phases: rooftop car parks in Phase 5 (city), take-off-from-motion in Phase 4 (flying car), chase/escape rules in Phase 9 (police).
+
 ### Phone apps
 Bank, Jobs, Map (GPS route), Bills, Market (cars, flying cars, homes, weapons where legal), Police (record, fines, permits), Settings.
 
@@ -236,15 +247,15 @@ Each phase lists what to build and a checklist. Paste the **prompt** into Claude
 
 ### Phase 4 — Flying car
 **Prompt:**
-> Phase 4. Flying car per section 5: wheels fold into thrusters with animation, take-off and landing, hover assist, banking turns, battery drain, thruster glow + ground dust particles + sound. Sky lanes as visible subtle markers. No-fly zone volumes. Rooftop landing pads.
+> Phase 4. Flying car per section 5: wheels fold into thrusters with animation, take-off and landing, hover assist, banking turns, battery drain, thruster glow + ground dust particles + sound. Sky lanes as visible subtle markers. No-fly zone volumes. Rooftop landing pads. Take-off from a moving car (Rooftop Escape, section 5): thrusters ignite at speed, wheels fold, and the car keeps its momentum when it drives off an edge.
 
-**Checklist:** take off from street, fly between towers, land on a roof, run out of battery and glide down safely.
+**Checklist:** take off from street, fly between towers, land on a roof, run out of battery and glide down safely; drive off a roof edge at speed and transition smoothly into flight without losing momentum.
 
 ### Phase 5 — The city: streaming, traffic, pedestrians
 **Prompt:**
-> Phase 5. Expand to Downtown and Suburbs using chunked streaming (load/unload chunks around the player). LOD and instancing. Road lane graph for AI traffic that obeys traffic lights and stops for obstacles. Pedestrians on a recast navmesh with idle/walk animations who react to danger. Day/night cycle and weather.
+> Phase 5. Expand to Downtown and Suburbs using chunked streaming (load/unload chunks around the player). LOD and instancing. Road lane graph for AI traffic that obeys traffic lights and stops for obstacles. Pedestrians on a recast navmesh with idle/walk animations who react to danger. Day/night cycle and weather. Multi-level rooftop car parks and building ramps across Downtown that cars can drive up to an open roof edge (Rooftop Escape, section 5).
 
-**Checklist:** city feels alive; memory stays stable while driving across the map; phone stays playable.
+**Checklist:** city feels alive; memory stays stable while driving across the map; phone stays playable; cars can drive up the rooftop car parks and ramps to the roof edge.
 
 ### Phase 6 — Life systems and phone
 **Prompt:**
@@ -266,9 +277,9 @@ Each phase lists what to build and a checklist. Paste the **prompt** into Claude
 
 ### Phase 9 — Weapons, combat, police
 **Prompt:**
-> Phase 9. Gun store + permit system + night black-market dealer. Weapons from section 5 with aiming, recoil, reload, ammo. Melee combat (punch, block, dodge). NPC reactions (flee, fight back, call police). Witness system. Wanted levels 1–5 with police cars, roadblocks, helicopter, air police, SWAT. Escape, repaint, arrest, hospital and criminal record per section 5. No gore.
+> Phase 9. Gun store + permit system + night black-market dealer. Weapons from section 5 with aiming, recoil, reload, ammo. Melee combat (punch, block, dodge). NPC reactions (flee, fight back, call police). Witness system. Wanted levels 1–5 with police cars, roadblocks, helicopter, air police, SWAT. Escape, repaint, arrest, hospital and criminal record per section 5. Rooftop Escape rules per section 5: ground police chase up ramps and stop at the roof edge; taking off adds +1 star only if the player then flies through a no-fly zone or outside sky lanes; at 4+ stars helicopters and air units follow into the sky. No gore.
 
-**Checklist:** every crime in the table triggers the right stars; pulling over at 1 star works; arrest and hospital flows work.
+**Checklist:** every crime in the table triggers the right stars; pulling over at 1 star works; arrest and hospital flows work; at 1–3 stars a rooftop take-off escapes ground police (they stop at the edge); at 4+ stars air units follow.
 
 ### Phase 10 — Accounts, cloud saves, leaderboards
 **Prompt:**
@@ -293,6 +304,8 @@ Each phase lists what to build and a checklist. Paste the **prompt** into Claude
 - Usage alerts on Vercel, Supabase, Cloudflare.
 - Upgrade Vercel to Pro before selling ads (free plan is non-commercial).
 - Trailer clips for X; upload to itch.io; apply to CrazyGames.
+- **Cinematic camera** debug mode: free camera with smooth paths, hidden HUD, slow-motion toggle.
+- **Trailer shot** for X: a police car chases the player up a rooftop car park, the player drives off the roof edge, thrusters fire, and the car flies away while the police car stops at the edge.
 
 ---
 
