@@ -1,0 +1,238 @@
+/*
+ * Phone layout (touch devices): clean light pills with a green accent, like Lagos Life.
+ * One row of pills on top, one chip under it, map + speed above the driving buttons, nothing
+ * overlapping. Desktop keeps the dark HUD in hud.css.
+ */
+.hud-touch,
+.tc-layer,
+.hud-touch ~ .ms-layer {
+  --hud-panel: rgb(255 255 255 / 0.9);
+  --hud-panel-strong: rgb(255 255 255 / 0.95);
+  --hud-border: rgb(16 32 42 / 0.08);
+  --hud-text: #13222b;
+  --hud-dim: rgb(19 34 43 / 0.62);
+  --hud-teal: #1fb87a;
+  --hud-teal-dim: rgb(31 184 122 / 0.18);
+  --hud-gold: #e0a100;
+  --hud-pill-shadow: 0 4px 14px rgb(10 20 30 / 0.16);
+}
+.hud-touch .hud-panel,
+.hud-touch .hud-btn,
+.tc-btn,
+.hud-touch ~ .ms-layer .ms-open,
+.hud-touch ~ .ms-layer .ms-objective {
+  box-shadow: var(--hud-pill-shadow);
+  border-color: var(--hud-border);
+}
+
+/* Row 1: Missions (left) · cash, Race, Menu (right) */
+.hud-touch .hud-tr {
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+}
+.hud-touch .hud-cash {
+  order: -1;
+  padding: 5px 12px;
+  font-size: 15px;
+  border-radius: 999px;
+}
+.hud-touch .hud-topbar {
+  gap: 6px;
+}
+.hud-touch .hud-btn {
+  height: 32px;
+  padding: 0 12px;
+  font-size: 12px;
+  color: var(--hud-text);
+  background: var(--hud-panel);
+  border-radius: 999px;
+}
+/* "Party" (coming soon) and the streets counter live in the menu on phones. */
+.hud-touch .hud-topbar .hud-btn:nth-child(2),
+.hud-touch .hud-streets {
+  display: none;
+}
+.hud-touch ~ .ms-layer .ms-open {
+  top: max(12px, env(safe-area-inset-top));
+  right: auto;
+  left: var(--hud-gap);
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  height: 32px;
+  border-radius: 999px;
+  border: 1px solid var(--hud-border);
+  animation: none;
+}
+.hud-touch ~ .ms-layer .ms-open-kicker {
+  font-size: 10px;
+}
+.hud-touch ~ .ms-layer .ms-open-level {
+  font-size: 12px;
+}
+
+/* Row 2: one chip — "What's next" (or the mission objective while a mission runs) */
+.hud-touch .hud-tc {
+  top: calc(max(12px, env(safe-area-inset-top)) + 42px);
+  max-width: calc(100vw - 32px);
+}
+.hud-touch .hud-next {
+  padding: 6px 12px;
+  border-radius: 999px;
+  max-width: calc(100vw - 32px);
+}
+.hud-touch .hud-next-kicker {
+  display: none;
+}
+.hud-touch .hud-next-title {
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.app:has(.ms-objective) .hud-touch .hud-tc {
+  display: none;
+}
+.hud-touch ~ .ms-layer .ms-objective {
+  top: calc(max(12px, env(safe-area-inset-top)) + 42px);
+  width: calc(100vw - 32px);
+  padding: 8px 12px;
+  border-radius: 16px;
+  border-top-width: 1px;
+  border-left: 4px solid var(--hud-gold);
+}
+.hud-touch ~ .ms-layer .ms-obj-text {
+  font-size: 15px;
+}
+.hud-touch ~ .ms-layer .ms-timer {
+  font-size: 20px;
+}
+
+/* Stars, drift score, toasts: under the chip on the left */
+.hud-touch .hud-tl {
+  top: calc(max(12px, env(safe-area-inset-top)) + 84px);
+  max-width: 62vw;
+}
+.app:has(.ms-objective) .hud-touch .hud-tl {
+  top: calc(max(12px, env(safe-area-inset-top)) + 170px);
+}
+
+/* Sponsored card, hijack prompt, gauges: a slim banner under the top rows */
+.hud-touch .hud-bc {
+  top: calc(max(12px, env(safe-area-inset-top)) + 84px);
+  bottom: auto;
+  right: var(--hud-gap);
+  left: auto;
+  transform: none;
+  align-items: flex-end;
+  max-width: 46vw;
+}
+.hud-touch .hud-adcard {
+  padding: 6px 28px 6px 10px;
+  border-radius: 14px;
+  max-width: 46vw;
+}
+.hud-touch .hud-adcard-kicker,
+.hud-touch .hud-adcard-cat,
+.hud-touch .hud-adcard p,
+.hud-touch .hud-adcard-links {
+  display: none;
+}
+.hud-touch .hud-adcard strong {
+  font-size: 13px;
+}
+.hud-touch .hud-adcard em {
+  font-size: 11px;
+}
+
+/* Bottom: minimap above the steering buttons, speed above Gas */
+.hud-touch .hud-bl {
+  bottom: calc(max(16px, env(safe-area-inset-bottom)) + 76px);
+}
+.hud-touch .hud-br {
+  bottom: calc(max(16px, env(safe-area-inset-bottom)) + 182px);
+  align-items: flex-end;
+}
+.hud-touch .hud-speedo {
+  width: 84px;
+  height: 84px;
+}
+.hud-touch .hud-speed {
+  font-size: 24px;
+}
+/* Assist toggles stay on (MAN/ABS/TCS/ESP are in the menu's settings on phones). */
+.hud-touch .hud-assists {
+  display: none;
+}
+
+/* Driving buttons: big, round, light */
+.tc-btn {
+  color: var(--hud-text);
+  background: var(--hud-panel);
+  border-radius: 999px;
+}
+.tc-left .tc-btn {
+  width: 64px;
+  height: 64px;
+  font-size: 22px;
+}
+.tc-gas {
+  width: 72px;
+  height: 160px;
+  color: #fff;
+  background: var(--hud-teal);
+  border-color: var(--hud-teal);
+  border-radius: 36px;
+}
+.tc-launch {
+  color: #fff;
+  background: #f0a500;
+  border-color: #f0a500;
+}
+.tc-btn.down {
+  color: #fff;
+  background: #128a5a;
+  border-color: #128a5a;
+}
+
+/* Landscape phones: short screen — everything closer to the edges */
+@media (orientation: landscape) and (max-height: 520px) {
+  .hud-touch .hud-tc {
+    top: max(10px, env(safe-area-inset-top));
+    max-width: 40vw;
+  }
+  .hud-touch .hud-next {
+    max-width: 40vw;
+  }
+  .hud-touch ~ .ms-layer .ms-objective {
+    top: max(10px, env(safe-area-inset-top));
+    width: min(360px, 44vw);
+  }
+  .hud-touch .hud-tl {
+    top: calc(max(10px, env(safe-area-inset-top)) + 44px);
+    max-width: 34vw;
+  }
+  .app:has(.ms-objective) .hud-touch .hud-tl {
+    top: calc(max(10px, env(safe-area-inset-top)) + 44px);
+  }
+  .hud-touch .hud-bc {
+    top: calc(max(10px, env(safe-area-inset-top)) + 44px);
+    max-width: 30vw;
+  }
+  .hud-touch .hud-bl {
+    bottom: calc(max(12px, env(safe-area-inset-bottom)) + 72px);
+  }
+  .hud-touch .hud-br {
+    bottom: calc(max(12px, env(safe-area-inset-bottom)) + 140px);
+  }
+  .tc-gas {
+    height: 124px;
+  }
+}
+
+/* The small dial has no room for the gear badge. */
+.hud-touch .hud-gear {
+  display: none;
+}

@@ -207,6 +207,9 @@ nose-up to vertical and shoots into the sky tumbling; the police car drives to w
 - **Bottom-right:** round km/h speedometer with gear letter and assist toggles (MAN/ABS/TCS/ESP).
 - **Bottom-center:** small gauges (drift multiplier, altitude while flying).
 - Style: dark translucent panels, white text, teal accents.
+- **Phones** (`ui/hud/phone.css`): Lagos-Life-style light rounded pills with a green accent; top row = Missions ·
+  cash · Race · Menu, one chip under it (What's next / mission objective), slim sponsored banner, minimap above
+  the steering buttons, speed above Gas. Nothing may overlap; check portrait 390×844 and landscape 844×390.
 
 ---
 

@@ -1,4 +1,5 @@
 import './hud.css';
+import './phone.css';
 import { DriftScore } from './DriftScore';
 import { AdCard } from './AdCard';
 import { Gauges } from './Gauges';
