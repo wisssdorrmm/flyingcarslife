@@ -1,7 +1,7 @@
-import { Suspense, useRef } from 'react';
+import { Suspense, useEffect, useRef } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { Stats } from '@react-three/drei';
-import { Physics, RigidBody, type RapierRigidBody } from '@react-three/rapier';
+import { Physics, RigidBody, useRapier, type RapierRigidBody } from '@react-three/rapier';
 import * as THREE from 'three';
 import { PHYSICS, WORLD_LIGHTING } from './config';
 import { PlaceInteractions } from './places/PlaceInteractions';
@@ -28,6 +28,8 @@ import { WorldColliders } from './world/WorldColliders';
 const params = new URLSearchParams(window.location.search);
 /** `?debug&colliders` draws physics shapes. */
 const showColliders = params.has('colliders');
+/** `?debug&pausephysics` freezes the physics world (for profiling). */
+const pausePhysics = params.has('pausephysics');
 /** `?debug&freecam` swaps the player for the free-fly review camera. */
 const freecamRequested = params.has('freecam');
 
@@ -70,6 +72,7 @@ export default function Game() {
           interpolate
           debug={debug && showColliders}
           updatePriority={-50}
+          paused={debug && pausePhysics}
         >
           <SkyAndSun />
           <Street />
@@ -85,6 +88,7 @@ export default function Game() {
           {!freecam && <ThirdPersonCamera />}
           {!freecam && <ChaseCamera />}
           {debug && <PhysicsProbe />}
+          {debug && <PhysicsDebugHook />}
         </Physics>
         <PostFX />
       </Suspense>
@@ -92,6 +96,15 @@ export default function Game() {
       {debug && <Stats />}
     </Canvas>
   );
+}
+
+/** Debug-only: exposes the physics world for devtools / automated profiling. */
+function PhysicsDebugHook() {
+  const { world } = useRapier();
+  useEffect(() => {
+    Object.assign(window, { __world: world });
+  }, [world]);
+  return null;
 }
 
 /** Debug-only: a body that falls, lands and respawns, proving the physics world steps. */

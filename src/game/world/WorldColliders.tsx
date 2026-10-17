@@ -1,5 +1,14 @@
-import { useMemo } from 'react';
-import { CuboidCollider, CylinderCollider, RigidBody } from '@react-three/rapier';
+import { useEffect, useMemo, useRef } from 'react';
+import { useFrame } from '@react-three/fiber';
+import { useRapier } from '@react-three/rapier';
+import { playerState } from '../player/playerState';
+import { vehicleState } from '../vehicles/vehicleState';
+import {
+  COLLIDER_CHUNK,
+  colliderStreaming,
+  streamCollidersAround,
+  type ColliderChunk,
+} from './colliderStreaming';
 import * as THREE from 'three';
 import { CAR_COLLIDER, PARKED } from '../vehicles/parkedLayout';
 import { buildingHeight, cityBuildings } from './buildingLayout';
@@ -127,21 +136,71 @@ export function WorldColliders() {
     return { boxes, cylinders };
   }, []);
 
-  return (
-    <RigidBody type="fixed" colliders={false}>
-      {/* Ground under everything (top at y = 0). */}
-      <CuboidCollider args={[1200, 0.5, 1200]} position={[0, -0.5, 0]} />
-      {boxes.map((b, i) => (
-        <CuboidCollider
-          key={`b${i}`}
-          args={b.half}
-          position={b.position}
-          rotation={[0, b.rotY, 0]}
-        />
-      ))}
-      {cylinders.map((c, i) => (
-        <CylinderCollider key={`c${i}`} args={[c.halfHeight, c.radius]} position={c.position} />
-      ))}
-    </RigidBody>
-  );
+  // Thousands of static colliders are created straight through Rapier, once. As React collider
+  // components they'd each be re-synced (and flagged as moved) every frame.
+  // Rapier 0.14's per-step cost also grows with the total collider count (~2.5 ms for the city),
+  // so colliders are grouped into chunks and only those near the player/car stay enabled.
+  const { world, rapier } = useRapier();
+  useEffect(() => {
+    const body = world.createRigidBody(rapier.RigidBodyDesc.fixed());
+    const rot = new THREE.Quaternion();
+    const byChunk = new Map<string, ColliderChunk>();
+    const add = (
+      desc: InstanceType<typeof rapier.ColliderDesc>,
+      [x, y, z]: Vec3,
+      rotY = 0,
+      radius = 0,
+    ) => {
+      rot.setFromAxisAngle(THREE.Object3D.DEFAULT_UP, rotY);
+      const c = world.createCollider(
+        desc.setTranslation(x, y, z).setRotation({ x: rot.x, y: rot.y, z: rot.z, w: rot.w }),
+        body,
+      );
+      // Big colliders (sidewalk slabs) count as near when any part of them is close.
+      if (radius > COLLIDER_CHUNK) return; // the ground: always on
+      const key = `${Math.floor(x / COLLIDER_CHUNK)},${Math.floor(z / COLLIDER_CHUNK)}`;
+      let chunk = byChunk.get(key);
+      if (!chunk) {
+        chunk = {
+          x: (Math.floor(x / COLLIDER_CHUNK) + 0.5) * COLLIDER_CHUNK,
+          z: (Math.floor(z / COLLIDER_CHUNK) + 0.5) * COLLIDER_CHUNK,
+          colliders: [],
+          enabled: true,
+        };
+        byChunk.set(key, chunk);
+      }
+      chunk.colliders.push(c);
+    };
+    // Ground under everything (top at y = 0).
+    add(rapier.ColliderDesc.cuboid(1200, 0.5, 1200), [0, -0.5, 0], 0, Infinity);
+    for (const b of boxes) {
+      add(
+        rapier.ColliderDesc.cuboid(...b.half),
+        b.position,
+        b.rotY,
+        Math.hypot(b.half[0], b.half[2]),
+      );
+    }
+    for (const c of cylinders) {
+      add(rapier.ColliderDesc.cylinder(c.halfHeight, c.radius), c.position, 0, c.radius);
+    }
+    colliderStreaming.chunks = [...byChunk.values()];
+    return () => {
+      colliderStreaming.chunks = [];
+      world.removeRigidBody(body);
+    };
+  }, [world, rapier, boxes, cylinders]);
+
+  const last = useRef(-1);
+  const focus = useMemo(() => new THREE.Vector3(), []);
+  useFrame(({ camera, clock }) => {
+    if (clock.elapsedTime - last.current < 0.25) return;
+    last.current = clock.elapsedTime;
+    const obj = vehicleState.active?.object ?? playerState.object;
+    if (obj) obj.getWorldPosition(focus);
+    else focus.copy(camera.position);
+    streamCollidersAround(focus.x, focus.z);
+  });
+
+  return null;
 }

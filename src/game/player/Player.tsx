@@ -15,6 +15,7 @@ import { BODY, INPUT, PHYSICS, PLAYER, PLAYER_ANIMATIONS } from '../config';
 import { useGame } from '../store/game';
 import { bmiOf, movementFactors, useLife } from '../store/life';
 import { vehicleState } from '../vehicles/vehicleState';
+import { streamCollidersAround } from '../world/colliderStreaming';
 import { consumePress, input, readMove } from '../systems/input';
 import {
   ANIMATION_SOURCE,
@@ -85,6 +86,8 @@ export function Player() {
     }
     if (!rb.isEnabled()) rb.setEnabled(true);
     if (playerState.teleport) {
+      // Make sure the destination is solid before arriving there.
+      streamCollidersAround(playerState.teleport.x, playerState.teleport.z);
       rb.setTranslation(playerState.teleport, true);
       rb.setNextKinematicTranslation(playerState.teleport);
       m.velocity.set(0, 0, 0);
