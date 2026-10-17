@@ -3,6 +3,7 @@
  * Props, StreetSigns) and the physics colliders, so what you see and what you bump into match.
  */
 import * as THREE from 'three';
+import { STYLE } from '../config';
 import type { SignalPhase } from '../systems/trafficSignals';
 import {
   CURB_HEIGHT as Y,
@@ -143,8 +144,8 @@ export const MAST_ARMS: MastArm[] = INTERSECTIONS.flatMap(armsFor);
 // Props
 // ---------------------------------------------------------------------------
 
-/** Roads with street trees (the busiest ones; trees are the heaviest prop). */
-const TREE_ROADS = new Set(['main', 'first', 'market']);
+/** Roads with leafy street trees (the rest of the city gets palms, see palmPlacements). */
+const TREE_ROADS = new Set(['oak', 'cedar']);
 
 export function propPlacements(): Record<PropName, THREE.Matrix4[]> {
   const out: Record<PropName, THREE.Matrix4[]> = {
@@ -230,5 +231,74 @@ export function signBlades(): SignBlade[] {
     out.push({ road: I.ew, position: [px + sx * reach, Y + 4.55, pz], rotY: 0 });
     out.push({ road: I.ns, position: [px, Y + 4.2, pz + sz * reach], rotY: Math.PI / 2 });
   }
+  return out;
+}
+
+// ---------------------------------------------------------------------------
+// Palms (CLAUDE.md §10): short fat date palms in downtown tree pits, tall thin fan palms
+// lining the avenues and the waterfront.
+// ---------------------------------------------------------------------------
+
+/** Roads lined with short date palms, and with tall fan palms. */
+const SHORT_PALM_ROADS = new Set(['main', 'market']);
+const TALL_PALM_ROADS = new Set([...roadsAlong('z').map((r) => r.id), 'waterfront']);
+
+export interface PalmPlacements {
+  tall: THREE.Matrix4[];
+  short: THREE.Matrix4[];
+}
+
+/** Nominal model heights (palmModel.ts builds the palms at these). */
+export const TALL_PALM_HEIGHT = 16;
+export const SHORT_PALM_HEIGHT = 5.5;
+
+let palmCache: PalmPlacements | null = null;
+
+export function palmPlacements(): PalmPlacements {
+  if (palmCache) return palmCache;
+  const out: PalmPlacements = { tall: [], short: [] };
+  // Keep clear of everything else on the sidewalk.
+  const p = new THREE.Vector3();
+  const occupied: [number, number, number][] = [];
+  for (const m of streetLightPlacements()) {
+    p.setFromMatrixPosition(m);
+    occupied.push([p.x, p.z, 2.5]);
+  }
+  for (const arm of MAST_ARMS) occupied.push([arm.pole[0], arm.pole[1], 3]);
+  const props = propPlacements();
+  for (const name of ['hydrant', 'trashCan', 'bench', 'utilityBox'] as const) {
+    for (const m of props[name]) {
+      p.setFromMatrixPosition(m);
+      occupied.push([p.x, p.z, 2]);
+    }
+  }
+  const free = (x: number, z: number) =>
+    occupied.every(([ox, oz, r]) => (x - ox) ** 2 + (z - oz) ** 2 > r * r);
+
+  let n = 0;
+  const jitter = () => ((n++ * 7919) % 100) / 100;
+  for (const r of ROADS) {
+    const tall = TALL_PALM_ROADS.has(r.id);
+    const short = SHORT_PALM_ROADS.has(r.id);
+    if (!tall && !short) continue;
+    const hw = halfWidth(r);
+    const spacing = short ? 15 : 16;
+    for (let u = -EXTENT + 20; u <= EXTENT - 20; u += spacing) {
+      if (!clearOfCrossings(r, u, 10)) continue;
+      for (const side of [-1, 1]) {
+        const uu = u + side * 4;
+        if (!clearOfCrossings(r, uu, 10)) continue;
+        const [x, z] = roadPoint(r, uu, side * (hw + 1.3));
+        if (!free(x, z)) continue;
+        // Random yaw also randomizes each palm's lean direction.
+        const yaw = jitter() * Math.PI * 2;
+        // Models are authored at a nominal height; instance scale picks the real height.
+        const [lo, hi] = short ? STYLE.palms.shortHeight : STYLE.palms.tallHeight;
+        const scale = (lo + jitter() * (hi - lo)) / (short ? SHORT_PALM_HEIGHT : TALL_PALM_HEIGHT);
+        (short ? out.short : out.tall).push(placement(x, Y, z, yaw, scale));
+      }
+    }
+  }
+  palmCache = out;
   return out;
 }

@@ -123,12 +123,12 @@ function useWallMaterials(
   const stuccoKit = usePbrMaterial('white_stucco', {
     repeat: [1.5, 1.5],
     metalness: 0,
-    color: '#ece6da',
+    color: '#f1e5d2',
   });
   const stuccoBox = usePbrMaterial('white_stucco', {
     tileMeters: 2,
     metalness: 0,
-    color: '#ece6da',
+    color: '#f1e5d2',
   });
 
   return useMemo(() => {
@@ -152,8 +152,9 @@ function useWallMaterials(
     // Kit wall panels are single planes, authored double-sided.
     for (const m of [redKit, darkKit, stuccoKit]) m.side = THREE.DoubleSide;
     return {
-      plaster_cream: plaster('#f3e7d3'),
-      plaster_grey: plaster('#d4d6d6'),
+      // Warm sun-bleached LA stucco tones (CLAUDE.md §10).
+      plaster_cream: plaster('#e8dac6'),
+      plaster_grey: plaster('#dcd3c6'),
       red_brick: { kit: redKit, box: redBox },
       dark_brick: { kit: darkKit, box: darkBox },
       stucco: { kit: stuccoKit, box: stuccoBox },
@@ -179,7 +180,8 @@ export function Buildings() {
     () => ({
       // Opaque, reflective glass: from the street, windows read as sky reflections over dark rooms.
       glass: new THREE.MeshStandardMaterial({
-        color: '#1a2027',
+        // Blue-teal tint, as in West Coast office glazing.
+        color: '#1d3640',
         metalness: 0.85,
         roughness: 0.06,
         envMapIntensity: 1.3,

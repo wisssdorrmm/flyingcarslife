@@ -8,6 +8,7 @@ import { useSettings } from '../store/settings';
 export type PbrId =
   | 'asphalt_02'
   | 'concrete_pavement'
+  | 'concrete_floor_worn_001'
   | 'concrete'
   | 'brick_wall_02'
   | 'dark_brick_wall'
@@ -87,4 +88,40 @@ export function usePbrMaterial(id: PbrId, opts: PbrOptions = {}): THREE.MeshStan
     maxAniso,
     quality.tier,
   ]);
+}
+
+/**
+ * Scores a sidewalk material into large square slabs (CLAUDE.md §10): dark seams on a grid in
+ * geometry UV space (meters) and a slightly different tone per slab, like separate concrete pours.
+ * Seams fade out by screen-space derivative so they never shimmer in the distance.
+ */
+export function addSlabSeams(mat: THREE.MeshStandardMaterial, slabMeters: number): void {
+  mat.onBeforeCompile = (shader) => {
+    shader.uniforms.slabSize = { value: slabMeters };
+    shader.vertexShader = shader.vertexShader
+      .replace('#include <common>', '#include <common>\nvarying vec2 vSlabUv;')
+      .replace('#include <uv_vertex>', '#include <uv_vertex>\nvSlabUv = uv;');
+    shader.fragmentShader = shader.fragmentShader
+      .replace(
+        '#include <common>',
+        '#include <common>\nvarying vec2 vSlabUv;\nuniform float slabSize;',
+      )
+      .replace(
+        '#include <map_fragment>',
+        /* glsl */ `#include <map_fragment>
+        {
+          vec2 g = vSlabUv / slabSize;
+          vec2 cell = floor(g);
+          float h = fract(sin(dot(cell, vec2(12.9898, 78.233))) * 43758.5453);
+          diffuseColor.rgb *= 0.92 + 0.13 * h;
+          vec2 f = fract(g);
+          float d = min(min(f.x, 1.0 - f.x), min(f.y, 1.0 - f.y)) * slabSize;
+          float w = fwidth(d);
+          float seam = 1.0 - smoothstep(0.012, 0.012 + max(w, 0.004), d);
+          seam *= clamp(1.0 - w * 25.0, 0.0, 1.0);
+          diffuseColor.rgb *= 1.0 - 0.6 * seam;
+        }`,
+      );
+  };
+  mat.customProgramCacheKey = () => `slab-seams-${slabMeters}`;
 }

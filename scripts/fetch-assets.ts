@@ -17,7 +17,8 @@ const HDRIS = [{ id: 'kloofendal_48d_partly_cloudy_puresky', res: ['1k', '2k'] }
 /** PBR textures: diffuse, OpenGL normal, ARM (AO/rough/metal) at the source resolution. */
 const TEXTURES = [
   'asphalt_02', // road
-  'concrete_pavement', // sidewalk slabs
+  'concrete_pavement', // ground plane
+  'concrete_floor_worn_001', // sidewalk slabs (worn, light; seams drawn in the shader)
   'concrete', // curbs
   'brick_wall_02', // red brick facade
   'dark_brick_wall', // dark brick facade

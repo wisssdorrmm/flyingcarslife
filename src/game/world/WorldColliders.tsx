@@ -12,7 +12,13 @@ import {
 import * as THREE from 'three';
 import { CAR_COLLIDER, PARKED } from '../vehicles/parkedLayout';
 import { buildingHeight, cityBuildings } from './buildingLayout';
-import { MAST_ARMS, ARM_HEIGHT, propPlacements, streetLightPlacements } from './furnitureLayout';
+import {
+  MAST_ARMS,
+  ARM_HEIGHT,
+  palmPlacements,
+  propPlacements,
+  streetLightPlacements,
+} from './furnitureLayout';
 import { BLOCKS, CORNER_RADIUS, CURB_HEIGHT } from './cityPlan';
 
 type Vec3 = [number, number, number];
@@ -106,6 +112,17 @@ export function WorldColliders() {
     for (const m of props.tree) {
       const { position: p } = decompose(m);
       cylinders.push({ halfHeight: 1.2, radius: 0.14, position: [p.x, p.y + 1.2, p.z] });
+    }
+    // Palm trunks: only the lower trunk matters for bumping into.
+    const palms = palmPlacements();
+    for (const [list, radius] of [
+      [palms.tall, 0.26],
+      [palms.short, 0.5],
+    ] as const) {
+      for (const m of list) {
+        const { position: p } = decompose(m);
+        cylinders.push({ halfHeight: 1.5, radius, position: [p.x, p.y + 1.5, p.z] });
+      }
     }
     for (const m of props.hydrant) {
       const { position: p } = decompose(m);

@@ -66,12 +66,16 @@ export function buildingHeight(b: Pick<BuildingSpec, 'floors'>): number {
   return (b.floors - 1) * FLOOR_HEIGHT + WALL_HEIGHT + 0.75;
 }
 
+/** Weighted: mostly warm stucco and plaster (West Coast), some brick (CLAUDE.md §10). */
 const VARIANTS: WallVariant[] = [
   'plaster_cream',
-  'plaster_grey',
-  'red_brick',
-  'dark_brick',
   'stucco',
+  'plaster_grey',
+  'plaster_cream',
+  'stucco',
+  'red_brick',
+  'plaster_grey',
+  'dark_brick',
 ];
 const WINDOWS: WindowStyle[] = ['centered_large', 'centered_double', 'centered_small'];
 /** Depth of buildings along a block side (meters). */

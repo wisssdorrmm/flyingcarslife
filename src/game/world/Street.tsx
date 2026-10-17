@@ -13,7 +13,12 @@ import {
   type Block,
   type Road,
 } from './cityPlan';
-import { usePbrMaterial } from './materials';
+import { STYLE } from '../config';
+import { makeWearTexture } from './decalAtlas';
+import { addSlabSeams, usePbrMaterial } from './materials';
+import { hashString, seeded } from './rand';
+import { Palms } from './Palms';
+import { StreetWear } from './StreetWear';
 
 /** Half-size of the ground plane under the whole city. */
 const GROUND = 1200;
@@ -83,20 +88,45 @@ function roadRect(r: Road, u0: number, u1: number, v0: number, v1: number): Rect
 }
 
 /** Asphalt: east–west roads run the full length; north–south roads skip the crossings. */
-function roadSurfaces(): Rect[] {
-  const out: Rect[] = [];
+function roadSurfaces(): { rect: Rect; road: Road }[] {
+  const out: { rect: Rect; road: Road }[] = [];
   for (const r of roadsAlong('x')) {
-    out.push(roadRect(r, -EXTENT, EXTENT, -halfWidth(r), halfWidth(r)));
+    out.push({ rect: roadRect(r, -EXTENT, EXTENT, -halfWidth(r), halfWidth(r)), road: r });
   }
   for (const r of roadsAlong('z')) {
     let u = -EXTENT;
     for (const c of roadsAlong('x')) {
-      out.push(roadRect(r, u, c.coord - halfWidth(c), -halfWidth(r), halfWidth(r)));
+      out.push({
+        rect: roadRect(r, u, c.coord - halfWidth(c), -halfWidth(r), halfWidth(r)),
+        road: r,
+      });
       u = c.coord + halfWidth(c);
     }
-    out.push(roadRect(r, u, EXTENT, -halfWidth(r), halfWidth(r)));
+    out.push({ rect: roadRect(r, u, EXTENT, -halfWidth(r), halfWidth(r)), road: r });
   }
   return out;
+}
+
+/** Road asphalt with a per-road vertex tint, so each street is faded a little differently. */
+function roadGeometry(): THREE.BufferGeometry {
+  const surfaces = roadSurfaces();
+  const g = rectsToGeometry(
+    surfaces.map((s) => s.rect),
+    0,
+  );
+  const colors: number[] = [];
+  const base = new THREE.Color(STYLE.asphaltTint);
+  const c = new THREE.Color();
+  for (const { road } of surfaces) {
+    const rand = seeded(hashString(`tint:${road.id}`));
+    const k = 1 + (rand() - 0.5) * 2 * STYLE.asphaltTintVariation;
+    // Older roads are more bleached (lighter, a touch warmer).
+    c.copy(base).multiplyScalar(k);
+    c.b *= 1 - (k - 1) * 0.3;
+    for (let i = 0; i < 4; i++) colors.push(c.r, c.g, c.b);
+  }
+  g.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+  return g;
 }
 
 interface Stop {
@@ -184,31 +214,6 @@ function rectsToGeometry(rects: Rect[], y: number): THREE.BufferGeometry {
   return g;
 }
 
-/** Blotchy noise used as an alpha mask so paint looks worn into the asphalt. */
-function makeWearTexture(): THREE.CanvasTexture {
-  const size = 256;
-  const canvas = document.createElement('canvas');
-  canvas.width = canvas.height = size;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) throw new Error('2D canvas unavailable');
-  ctx.fillStyle = '#fff';
-  ctx.fillRect(0, 0, size, size);
-  let seed = 1337;
-  const rand = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
-  for (let i = 0; i < 900; i++) {
-    const r = 1 + rand() * rand() * 9;
-    const v = Math.floor(rand() * 120);
-    ctx.fillStyle = `rgb(${v},${v},${v})`;
-    ctx.beginPath();
-    ctx.arc(rand() * size, rand() * size, r, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  const tex = new THREE.CanvasTexture(canvas);
-  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-  tex.repeat.set(0.6, 0.6);
-  return tex;
-}
-
 /** Merges many geometries with the same layout into one (fewer draw calls). */
 function mergeAll(geos: THREE.BufferGeometry[]): THREE.BufferGeometry {
   const merged = new THREE.BufferGeometry();
@@ -250,17 +255,24 @@ function mergeAll(geos: THREE.BufferGeometry[]): THREE.BufferGeometry {
 
 export function Street() {
   const asphalt = usePbrMaterial('asphalt_02', { tileMeters: 5, normalScale: 1.2 });
-  const paving = usePbrMaterial('concrete_pavement', {
-    tileMeters: 3,
+  useMemo(() => {
+    // Sun-faded light grey: the per-road tint rides in vertex colors (CLAUDE.md §10).
+    asphalt.vertexColors = true;
+    asphalt.color.setScalar(1.55);
+  }, [asphalt]);
+  const paving = usePbrMaterial('concrete_floor_worn_001', {
+    tileMeters: 4,
     metalness: 0,
-    color: '#b9bec2',
+    color: STYLE.pavingTint,
   });
-  const curb = usePbrMaterial('concrete', { tileMeters: 1.5, metalness: 0, color: '#d8d8d4' });
+  // Large scored 1.5 m slabs, each pour a slightly different tone.
+  useMemo(() => addSlabSeams(paving, 1.5), [paving]);
+  const curb = usePbrMaterial('concrete', { tileMeters: 1.5, metalness: 0, color: STYLE.curbTint });
 
   const geometry = useMemo(
     () => ({
       // Asphalt only where the roads are; a wide ground plane sits under everything else.
-      roads: mergeAll(roadSurfaces().map(([x0, x1, z0, z1]) => groundQuad(x0, x1, z0, z1))),
+      roads: roadGeometry(),
       ground: groundQuad(-GROUND, GROUND, -GROUND, GROUND, -0.01),
       sidewalks: mergeAll(BLOCKS.map(sidewalkSlab)),
       markings: buildMarkings(),
@@ -281,8 +293,9 @@ export function Street() {
       polygonOffsetUnits: -2,
     };
     return {
-      white: new THREE.MeshStandardMaterial({ color: '#e9e9e4', ...common }),
-      yellow: new THREE.MeshStandardMaterial({ color: '#d9a21b', ...common }),
+      // Slightly sun-faded paint.
+      white: new THREE.MeshStandardMaterial({ color: '#dedcd5', ...common }),
+      yellow: new THREE.MeshStandardMaterial({ color: '#cf9f2c', ...common }),
       whiteGeo: rectsToGeometry(geometry.markings.white, 0.004),
       yellowGeo: rectsToGeometry(geometry.markings.yellow, 0.004),
     };
@@ -295,6 +308,8 @@ export function Street() {
       <mesh geometry={paint.whiteGeo} material={paint.white} receiveShadow />
       <mesh geometry={paint.yellowGeo} material={paint.yellow} receiveShadow />
       <mesh geometry={geometry.sidewalks} material={[paving, curb]} receiveShadow castShadow />
+      <StreetWear />
+      <Palms />
     </group>
   );
 }

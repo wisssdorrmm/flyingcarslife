@@ -61,10 +61,7 @@ export default function Game() {
         if (debug) Object.assign(window, { __scene: scene, __gl: gl });
       }}
     >
-      <fog
-        attach="fog"
-        args={[WORLD_LIGHTING.fogColor, WORLD_LIGHTING.fogNear, WORLD_LIGHTING.fogFar]}
-      />
+      <fogExp2 attach="fog" args={[WORLD_LIGHTING.fogColor, WORLD_LIGHTING.fogDensity]} />
       {freecam ? <DebugCamera /> : <DesktopInput />}
       <LifeSystem />
       {!freecam && <NetSystem />}

@@ -7,7 +7,8 @@ required; we list them anyway. Downloaded by `npm run assets:fetch`, compressed 
 | --------------------------------------------------------------------------------------------------------- | ------- | ----------------------------- |
 | kloofendal_48d_partly_cloudy_puresky                                                                      | HDRI    | Sky, image-based lighting     |
 | asphalt_02                                                                                                | Texture | Roads, roofs                  |
-| concrete_pavement                                                                                         | Texture | Sidewalks                     |
+| concrete_pavement                                                                                         | Texture | Ground plane                  |
+| concrete_floor_worn_001                                                                                   | Texture | Sidewalk slabs                |
 | concrete                                                                                                  | Texture | Curbs, tree pits              |
 | brick_wall_02, dark_brick_wall, white_stucco                                                              | Texture | Building facades, party walls |
 | granite_tile                                                                                              | Texture | (reserved: storefront bases)  |

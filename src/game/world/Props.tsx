@@ -12,8 +12,8 @@ import {
   mergePartsByMaterial,
   placement,
 } from './instancing';
-import { CURB_HEIGHT as Y } from './cityPlan';
 import { usePbrMaterial } from './materials';
+import { SLAB_TOP } from './StreetWear';
 
 interface PropDef {
   model: string;
@@ -56,8 +56,8 @@ const PROPS = {
   tree: { model: 'tree_small_02' },
 } satisfies Record<PropName, PropDef>;
 
-/** Tree pits: a recessed soil square edged in steel, under every tree. */
-function TreePits({ trees }: { trees: THREE.Matrix4[] }) {
+/** Tree pits: a soil square under every street tree and palm. */
+export function TreePits({ trees }: { trees: THREE.Matrix4[] }) {
   const soil = usePbrMaterial('concrete', { tileMeters: 1, metalness: 0, color: '#4a3b2c' });
   const mesh = useMemo(() => {
     const geo = new THREE.BoxGeometry(1.4, 0.02, 1.4);
@@ -65,7 +65,8 @@ function TreePits({ trees }: { trees: THREE.Matrix4[] }) {
     const p = new THREE.Vector3();
     trees.forEach((m, i) => {
       p.setFromMatrixPosition(m);
-      inst.setMatrixAt(i, placement(p.x, Y + 0.001, p.z));
+      // Just proud of the slab's walking surface (the bevel lifts it above CURB_HEIGHT).
+      inst.setMatrixAt(i, placement(p.x, SLAB_TOP - 0.006, p.z));
     });
     inst.receiveShadow = true;
     return inst;

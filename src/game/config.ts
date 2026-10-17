@@ -145,16 +145,31 @@ export const SAVE = {
   adImpressionFlushMs: 60_000,
 } as const;
 
+/** Bright, dusty West Coast midday (CLAUDE.md §10). */
 export const WORLD_LIGHTING = {
-  sunIntensity: 3.2,
-  sunColor: '#fff3e0',
+  sunIntensity: 4.2,
+  sunColor: '#ffeccc',
   /** The HDRI already contains the sun; keep IBL lower so it isn't counted twice. */
-  environmentIntensity: 0.75,
+  environmentIntensity: 0.7,
   backgroundIntensity: 1,
-  exposure: 0.9,
-  fogColor: '#c9d3dc',
-  fogNear: 60,
-  fogFar: 450,
+  /**
+   * Sky rotation about +Y (rad). Puts the HDRI sun in the north, so looking south toward the
+   * hills and the HARBOR HILLS sign you have the sun at your back and they are front-lit.
+   */
+  skyRotation: 2.16,
+  exposure: 0.92,
+  /** Blue-grey atmospheric haze (exponential, so far towers soften but never vanish). */
+  fogColor: '#aebfcf',
+  fogDensity: 0.0016,
+  /** Warm dusty grade, applied in linear light before tone mapping. */
+  grade: {
+    /** Per-channel white balance gain (warm = more red, less blue). */
+    gain: [1.06, 1.0, 0.9] as [number, number, number],
+    /** Dusty lift added to shadows, linear RGB. */
+    lift: [0.012, 0.009, 0.005] as [number, number, number],
+    saturation: 0.94,
+    contrast: 1.06,
+  },
 } as const;
 
 export const DEBUG_CAMERA = {
@@ -191,6 +206,7 @@ export const KEYMAP = {
   phone: ['KeyP'],
   map: ['KeyM'],
   social: ['KeyX'],
+  camera: ['KeyC'],
 } as const;
 
 export const INPUT = {
@@ -323,4 +339,79 @@ export const DEMO_PLAYERS = {
   /** Seconds between unprompted chat lines from the crowd. */
   chatEvery: 22,
   acceptChance: 0.85,
+} as const;
+
+/** Harbor City look: wear, dirt, palms and hills (CLAUDE.md §10). */
+export const STYLE = {
+  /** Sun-faded light grey asphalt; each road gets a slightly different tint. */
+  asphaltTint: '#d7d3cc',
+  asphaltTintVariation: 0.1,
+  /** Light concrete sidewalk slabs. */
+  pavingTint: '#b2aca2',
+  curbTint: '#cfc9be',
+  decals: {
+    /** Average road decals (cracks, patches, seams, oil, tire marks) per meter of road. */
+    roadPerMeter: 0.55,
+    /** Average sidewalk decals (stains, gum, cracks, litter) per meter of block side. */
+    sidewalkPerMeter: 0.45,
+    /** Decals are chunked; chunks farther than this (m) are hidden. */
+    visibleDistance: { low: 70, medium: 110, high: 160, ultra: 220 },
+  },
+  /** Chance a corner gets a red no-parking curb, and its length (m). */
+  redCurbChance: 0.6,
+  redCurbLength: [5, 9] as [number, number],
+  palms: {
+    /** Spacing along the avenues (m). */
+    spacing: 16,
+    tallHeight: [13, 19] as [number, number],
+    shortHeight: [4.5, 7] as [number, number],
+    /** Crown sway at the top of a palm (m) and its speed (rad/s). */
+    swayAmplitude: 0.22,
+    swaySpeed: 0.85,
+    /** Palms are tall and read from afar, but still get culled per chunk. */
+    visibleDistance: { low: 140, medium: 220, high: 320, ultra: 420 },
+  },
+  hills: {
+    /** Ring of dry hills around the city: inner foot and outer ridge radius (m). */
+    innerRadius: 760,
+    outerRadius: 1350,
+    /** Peak height behind the hillside sign (south) and elsewhere (m). */
+    peakHeight: 230,
+    baseHeight: 95,
+    /** Exponential haze density for the backdrop (it ignores scene fog). */
+    hazeDensity: 0.0003,
+    treeCount: 2200,
+    /** The hillside sign faces the city straight down 1st Ave (angle from +x toward +z). */
+    sign: { text: 'HARBOR HILLS', letterHeight: 30, angle: Math.PI * 0.5, radius: 930 },
+  },
+} as const;
+
+/** Bystander "Phone camera" mode: vertical filming and clip recording (CLAUDE.md §10). */
+export const PHONE_CAM = {
+  /** Eye height and how far in front of the face the phone is held (m). */
+  eyeHeight: 1.58,
+  holdDistance: 0.32,
+  /** Vertical field of view, roughly a phone's main camera. */
+  fov: 68,
+  pitchMin: -1.35,
+  pitchMax: 1.35,
+  /** Handheld shake: rotation (rad) and position (m) amplitude. */
+  shakeRotation: 0.0045,
+  shakePosition: 0.004,
+  /** Auto-exposure: exposure when looking at the ground vs at the sky, and adapt rate (1/s). */
+  exposureGround: 1.12,
+  exposureSky: 0.82,
+  exposureAdapt: 1.6,
+  /** Focus hunt blur (px) when filming starts or the view swings fast, and its decay (1/s). */
+  focusBlur: 5,
+  focusDecay: 3.5,
+  /** Look speed (rad/s) above which focus hunts again. */
+  refocusTurnRate: 2.2,
+  /** Recorded clip size (9:16) and limits. */
+  clipWidth: 720,
+  clipHeight: 1280,
+  clipFps: 30,
+  maxClipSeconds: 20,
+  videoBitsPerSecond: 6_000_000,
+  watermark: 'Flying Cars Life',
 } as const;
