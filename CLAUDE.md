@@ -198,11 +198,11 @@ public/
 ## 8. Build order (current)
 
 1. ✅ Audit and park what doesn't fit.
-2. **City from OSM** — generator + streamed tiles for North Beach / Fisherman's Wharf: terrain, roads with markings,
+2. ✅ **City from OSM** — generator + streamed tiles for North Beach / Fisherman's Wharf: terrain, roads with markings,
    sidewalks/curbs, Victorian/shop/tower buildings, trees, lamps, signals, wires, cable-car tracks, cones.
-3. **Driving / drift feel** — arcade handling, handbrake drifts, smoke, sparks, cones, drift score → cash, assists.
-4. **Traffic and pedestrians** — parked cars, AI traffic, buses, pedestrians.
-5. **HUD** per section 6.9. → *Stop and show the user.*
+3. ✅ **Driving / drift feel** — arcade handling, handbrake drifts, smoke, sparks, cones, drift score → cash, assists.
+4. ✅ **Traffic and pedestrians** — parked cars, AI traffic, buses, pedestrians.
+5. ✅ **HUD** per section 6.9. → *Stop and show the user.*
 6. **Police** per section 6.3.
 7. **Rocket launch flight** per section 6.2.
 8. **Goals and garage** per sections 6.4–6.5.
