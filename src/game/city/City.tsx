@@ -15,6 +15,7 @@ import { Traffic } from '../traffic/Traffic';
 import { TireFx } from '../vehicles/TireFx';
 import { loadCity, preloadAround } from './cityData';
 import { Billboards } from '../ads/Billboards';
+import { ShaderWarmup } from '../world/ShaderWarmup';
 import { BayBridge } from './BayBridge';
 import { CityTiles } from './CityTiles';
 import { GpsRoute } from './GpsRoute';
@@ -73,6 +74,7 @@ export function City() {
       {groundReady && <Traffic city={city} />}
       {groundReady && <Pedestrians city={city} />}
       <LeftCars />
+      {groundReady && <ShaderWarmup />}
       {groundReady && <Goals city={city} />}
       {groundReady && <Hijack city={city} />}
       {groundReady && car && (

@@ -34,7 +34,10 @@ function merge(parts: THREE.BufferGeometry[]): THREE.BufferGeometry {
 }
 
 /** Lumpy canopy: a few displaced icosahedron blobs. Trunk is separate. */
-export function treeGeometries(): { trunk: THREE.BufferGeometry; canopy: THREE.BufferGeometry } {
+export function treeGeometries(detail = 1): {
+  trunk: THREE.BufferGeometry;
+  canopy: THREE.BufferGeometry;
+} {
   const trunk = place(new THREE.CylinderGeometry(0.12, 0.18, 3.2, 6, 1, true), 0, 1.6, 0);
   const blobs: THREE.BufferGeometry[] = [];
   const spec: [number, number, number, number][] = [
@@ -44,7 +47,7 @@ export function treeGeometries(): { trunk: THREE.BufferGeometry; canopy: THREE.B
     [0.2, 5.1, -0.2, 1.2],
   ];
   for (const [x, y, z, r] of spec) {
-    const g = new THREE.IcosahedronGeometry(r, 1);
+    const g = new THREE.IcosahedronGeometry(r, detail);
     const p = g.getAttribute('position');
     for (let i = 0; i < p.count; i++) {
       const v = new THREE.Vector3().fromBufferAttribute(p, i);

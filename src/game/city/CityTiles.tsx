@@ -64,12 +64,14 @@ export function CityTiles({ city, onReady }: { city: City; onReady?: () => void 
   const last = useRef(-1);
   const size = city.index.tileSize;
   const baseRadius = CITY_STREAMING.viewRadius[quality.tier];
+  const propRadius = CITY_STREAMING.propRadius[quality.tier];
+  const propCenter = useMemo(() => new THREE.Vector3(1e9, 0, 1e9), []);
 
   /** Fixed body holding every tile collider (created in the mount effect below). */
   const bodyRef = useRef<RigidBody | null>(null);
 
   const props = useMemo(() => {
-    const tree = treeGeometries();
+    const tree = treeGeometries(quality.tier === 'low' ? 0 : 1);
     const signal = signalGeometries();
     const car = parkedCarGeometries();
     const mk = (geo: THREE.BufferGeometry, mat: THREE.Material, cap: number, shadow: boolean) => {
@@ -298,17 +300,22 @@ export function CityTiles({ city, onReady }: { city: City; onReady?: () => void 
       counts[key] = i + 1;
     };
     const wire: number[] = [];
+    // Small props only near the player (by quality tier); signals, wires and poles everywhere.
+    propCenter.copy(focus);
+    const r2 = propRadius * propRadius;
+    const near = (x: number, z: number) => (x - focus.x) ** 2 + (z - focus.z) ** 2 < r2;
     for (const t of tiles.current.values()) {
       if (!t.data) continue;
       const pr = t.data.header.props;
       for (const [x, y, z, sc, rot] of pr.trees) {
+        if (!near(x!, z!)) continue;
         put('trunk', x!, y!, z!, rot!, sc);
         // Slight per-tree green variation.
         const h = Math.sin(x! * 12.9898 + z! * 78.233) * 43758.5453;
         col.setHSL(0.24 + (h - Math.floor(h)) * 0.06, 0.42, 0.33 + (h - Math.floor(h)) * 0.08);
         put('canopy', x!, y!, z!, rot!, sc, col);
       }
-      for (const [x, y, z, rot] of pr.lamps) put('lamp', x!, y!, z!, rot!);
+      for (const [x, y, z, rot] of pr.lamps) if (near(x!, z!)) put('lamp', x!, y!, z!, rot!);
       for (const sig of pr.signals) {
         const [x, y, z, rot] = sig;
         put('signalPole', x!, y!, z!, rot!);
@@ -316,6 +323,7 @@ export function CityTiles({ city, onReady }: { city: City; onReady?: () => void 
         signalList.current.push(sig);
       }
       for (const [x, y, z, rot, paint] of pr.parked) {
+        if (!near(x!, z!)) continue;
         put('carBody', x!, y!, z!, rot!, 1, PARKED_PAINTS[paint! % PARKED_PAINTS.length]);
         put('carGlass', x!, y!, z!, rot!);
         put('carWheels', x!, y!, z!, rot!);
@@ -503,6 +511,10 @@ export function CityTiles({ city, onReady }: { city: City; onReady?: () => void 
       else focus.copy(camera.position);
 
       stream(focus.x, focus.z);
+    }
+    // Re-pick nearby props once the player has moved a fair way.
+    if ((focus.x - propCenter.x) ** 2 + (focus.z - propCenter.z) ** 2 > 45 * 45) {
+      propsDirty.current = true;
     }
     if (propsDirty.current) {
       propsDirty.current = false;

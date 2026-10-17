@@ -130,38 +130,89 @@ export function Billboards({ city }: { city: City }) {
     [house, bookedTex],
   );
 
-  const boards = useRef<THREE.Mesh[]>([]);
-  const frame = useMemo(
-    () => new THREE.MeshStandardMaterial({ color: '#2a2d31', roughness: 0.6, metalness: 0.5 }),
-    [],
-  );
-  const materials = useMemo(
-    () =>
-      slots.map((s, i) => {
-        const tex = bookedTex.get(s.id) ?? house[i % house.length]!;
-        return new THREE.MeshStandardMaterial({
-          map: tex,
+  // Instanced: posts and frames in two meshes, house boards grouped by creative; booked boards
+  // keep their own mesh (own texture, clickable).
+  const inst = useMemo(() => {
+    const W = BILLBOARDS.width;
+    const H = BILLBOARDS.height;
+    const L = BILLBOARDS.lift;
+    const frameMat = new THREE.MeshStandardMaterial({
+      color: '#2a2d31',
+      roughness: 0.6,
+      metalness: 0.5,
+    });
+    const posts = new THREE.InstancedMesh(
+      new THREE.CylinderGeometry(0.13, 0.16, L, 8).translate(0, L / 2, -0.15),
+      frameMat,
+      slots.length * 2,
+    );
+    const frames = new THREE.InstancedMesh(
+      new THREE.BoxGeometry(W + 0.3, H + 0.3, 0.18).translate(0, L + H / 2, -0.12),
+      frameMat,
+      slots.length,
+    );
+    const boardGeo = new THREE.PlaneGeometry(W, H).translate(0, L + H / 2, 0);
+    const boardMats = house.map(
+      (t) =>
+        new THREE.MeshStandardMaterial({
+          map: t,
           roughness: 0.55,
           emissive: '#ffffff',
-          emissiveMap: tex,
+          emissiveMap: t,
           emissiveIntensity: 0.12,
-        });
-      }),
-    [slots, bookedTex, house],
+        }),
+    );
+    const boards = boardMats.map((m) => {
+      const im = new THREE.InstancedMesh(boardGeo, m, slots.length);
+      im.count = 0;
+      im.frustumCulled = false;
+      return im;
+    });
+    const m4 = new THREE.Matrix4();
+    const q = new THREE.Quaternion();
+    const one = new THREE.Vector3(1, 1, 1);
+    const at = (s: Slot, dx = 0) => {
+      q.setFromAxisAngle(THREE.Object3D.DEFAULT_UP, s.yaw);
+      const off = new THREE.Vector3(dx, 0, 0).applyQuaternion(q);
+      return m4.compose(new THREE.Vector3(s.x + off.x, s.y, s.z + off.z), q, one);
+    };
+    slots.forEach((s, i) => {
+      posts.setMatrixAt(i * 2, at(s, -W * 0.3));
+      posts.setMatrixAt(i * 2 + 1, at(s, W * 0.3));
+      frames.setMatrixAt(i, at(s));
+    });
+    for (const m of [posts, frames]) {
+      m.castShadow = true;
+      m.frustumCulled = false;
+    }
+    return { posts, frames, boards, boardMats, boardGeo, frameMat, at };
+  }, [slots, house]);
+  useEffect(
+    () => () => {
+      inst.posts.geometry.dispose();
+      inst.frames.geometry.dispose();
+      inst.boardGeo.dispose();
+      inst.frameMat.dispose();
+      inst.boardMats.forEach((m) => m.dispose());
+    },
+    [inst],
   );
-  useEffect(() => () => materials.forEach((m) => m.dispose()), [materials]);
 
   // Rotate house creatives on empty slots.
-  const last = useRef(0);
+  const last = useRef(-1);
   useFrame(({ clock }) => {
     const step = Math.floor(clock.elapsedTime / BILLBOARDS.rotateSeconds);
     if (step === last.current) return;
     last.current = step;
+    const counts = inst.boards.map(() => 0);
     slots.forEach((s, i) => {
       if (booked.has(s.id)) return;
-      const m = materials[i]!;
-      m.map = m.emissiveMap = house[(i + step) % house.length]!;
-      m.needsUpdate = true;
+      const k = (i + step) % inst.boards.length;
+      inst.boards[k]!.setMatrixAt(counts[k]!++, inst.at(s));
+    });
+    inst.boards.forEach((b, k) => {
+      b.count = counts[k]!;
+      b.instanceMatrix.needsUpdate = true;
     });
   });
 
@@ -170,31 +221,24 @@ export function Billboards({ city }: { city: City }) {
   const L = BILLBOARDS.lift;
   return (
     <>
-      {slots.map((s, i) => (
-        <group key={s.id} position={[s.x, s.y, s.z]} rotation-y={s.yaw}>
-          {[-W * 0.3, W * 0.3].map((px) => (
-            <mesh key={px} position={[px, L / 2, -0.15]} material={frame} castShadow>
-              <cylinderGeometry args={[0.13, 0.16, L, 8]} />
-            </mesh>
-          ))}
-          <mesh position={[0, L + H / 2, -0.12]} material={frame} castShadow>
-            <boxGeometry args={[W + 0.3, H + 0.3, 0.18]} />
-          </mesh>
+      <primitive object={inst.posts} />
+      <primitive object={inst.frames} />
+      {inst.boards.map((b, k) => (
+        <primitive key={k} object={b} />
+      ))}
+      {slots
+        .filter((s) => booked.has(s.id))
+        .map((s) => (
           <mesh
-            ref={(m) => {
-              if (m) boards.current[i] = m;
-            }}
-            position={[0, L + H / 2, 0]}
-            material={materials[i]}
-            onClick={() => {
-              const link = booked.get(s.id)?.link;
-              if (link) window.open(link, '_blank', 'noopener');
-            }}
+            key={s.id}
+            position={[s.x, s.y + L + H / 2, s.z]}
+            rotation-y={s.yaw}
+            onClick={() => window.open(booked.get(s.id)!.link, '_blank', 'noopener')}
           >
             <planeGeometry args={[W, H]} />
+            <meshStandardMaterial map={bookedTex.get(s.id)} roughness={0.55} />
           </mesh>
-        </group>
-      ))}
+        ))}
     </>
   );
 }

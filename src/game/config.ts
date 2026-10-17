@@ -176,6 +176,8 @@ export const WORLD_LIGHTING = {
 export const CITY_STREAMING = {
   /** Tiles whose square is within this distance (m) of the car are drawn. */
   viewRadius: { low: 330, medium: 450, high: 600, ultra: 750 },
+  /** Trees, lamps and parked cars are drawn within this distance (m) of the player. */
+  propRadius: { low: 150, medium: 220, high: 300, ultra: 380 },
   /** Extra view radius while flying (you can see much further from the air). */
   flyingBonus: 300,
   /** Loaded tiles are dropped once this much further than the view radius. */

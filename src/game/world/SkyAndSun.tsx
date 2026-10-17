@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import { hdriUrl } from '../../lib/assets';
 import { WORLD_LIGHTING } from '../config';
 import { useSettings } from '../store/settings';
+import { STARTUP_QUALITY } from './materials';
 
 const HDRI = 'kloofendal_48d_partly_cloudy_puresky';
 
@@ -46,8 +47,8 @@ function findSunDirection(texture: THREE.Texture): THREE.Vector3 {
 }
 
 export function SkyAndSun() {
-  const quality = useSettings((s) => s.quality);
-  const texture = useEnvironment({ files: hdriUrl(HDRI, quality) });
+  // Startup tier: swapping the HDRI file on a graphics change would suspend the whole scene.
+  const texture = useEnvironment({ files: hdriUrl(HDRI, STARTUP_QUALITY) });
   const rotation = useMemo(() => new THREE.Euler(0, WORLD_LIGHTING.skyRotation, 0), []);
   const sunDir = useMemo(
     () =>

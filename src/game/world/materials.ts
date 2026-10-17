@@ -31,11 +31,16 @@ export interface PbrOptions {
 
 const ANISOTROPY = { low: 2, medium: 4, high: 8, ultra: 16 } as const;
 
+/** Quality when the game started (texture resolution is fixed for the session). */
+export const STARTUP_QUALITY = useSettings.getState().quality;
+
 /** Loads a Poly Haven PBR set (diffuse / normal / ARM) sized for the current quality tier. */
 export function usePbrMaterial(id: PbrId, opts: PbrOptions = {}): THREE.MeshStandardMaterial {
   const quality = useSettings((s) => s.quality);
   const maxAniso = useThree((s) => s.gl.capabilities.getMaxAnisotropy());
-  const urls = pbrTextureUrls(id, quality);
+  // Texture files stay at the startup tier: loading new ones would suspend (and reload) the scene
+  // whenever the player changes graphics; everything else follows the live setting.
+  const urls = pbrTextureUrls(id, STARTUP_QUALITY);
   const maps = useTexture(urls);
   const {
     tileMeters = 2,
