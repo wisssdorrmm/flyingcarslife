@@ -363,8 +363,6 @@ export function Buildings() {
       w: [-1, 0],
     };
     const blocks = [...bySide.values()].map(({ side, bs }) => {
-      const near = facadeGroup(bs, false, side);
-      near.visible = false;
       // The facade line: a thin rectangle along the side's building line.
       const xs = bs.flatMap((b) => (side === 'e' ? [b.x1] : side === 'w' ? [b.x0] : [b.x0, b.x1]));
       const zs = bs.flatMap((b) => (side === 's' ? [b.z1] : side === 'n' ? [b.z0] : [b.z0, b.z1]));
@@ -374,24 +372,49 @@ export function Buildings() {
         z0: Math.min(...zs),
         z1: Math.max(...zs),
       };
-      return { near, bounds, outward: OUTWARD[side] };
+      // Facades are built lazily when the camera first comes near, and freed when it's far.
+      return {
+        build: () => facadeGroup(bs, false, side),
+        near: null as THREE.Group | null,
+        bounds,
+        outward: OUTWARD[side],
+      };
     });
-    return { shells, blocks };
+    const facadeRoot = new THREE.Group();
+    facadeRoot.name = 'facades';
+    return { shells, blocks, facadeRoot };
   }, [gltf, walls, roof, shared]);
 
   // Level of detail per block side: full facades only nearby and facing the camera.
   const quality = useSettings((s) => s.quality);
   const lastCheck = useRef(-1);
   useFrame(({ camera, clock }) => {
-    if (clock.elapsedTime - lastCheck.current < 0.2) return;
+    if (clock.elapsedTime - lastCheck.current < 0.1) return;
     lastCheck.current = clock.elapsedTime;
     const { x, z } = camera.position;
+    let builds = 0;
     for (const b of city.blocks) {
       const dx = Math.max(b.bounds.x0 - x, 0, x - b.bounds.x1);
       const dz = Math.max(b.bounds.z0 - z, 0, z - b.bounds.z1);
+      const d = Math.hypot(dx, dz);
       // In front of the facade (with a little slack for the camera swinging round a corner).
       const front = (x - b.bounds.x0) * b.outward[0] + (z - b.bounds.z0) * b.outward[1] > -3;
-      b.near.visible = front && Math.hypot(dx, dz) < quality.buildingDetailDistance;
+      const want = front && d < quality.buildingDetailDistance;
+      // Build at most two block sides per check so approaching a district never hitches.
+      if (want && !b.near && builds < 2) {
+        b.near = b.build();
+        city.facadeRoot.add(b.near);
+        builds++;
+      }
+      if (b.near) b.near.visible = want;
+      // Free facades far behind us (instance buffers only; kit geometry is shared).
+      if (b.near && d > quality.buildingDetailDistance * 2.5) {
+        city.facadeRoot.remove(b.near);
+        b.near.traverse(
+          (o) => (o as THREE.InstancedMesh).isInstancedMesh && (o as THREE.InstancedMesh).dispose(),
+        );
+        b.near = null;
+      }
     }
   });
 
@@ -406,9 +429,7 @@ export function Buildings() {
   return (
     <group name="buildings">
       <primitive object={city.shells} />
-      {city.blocks.map((b, i) => (
-        <primitive key={i} object={b.near} />
-      ))}
+      <primitive object={city.facadeRoot} />
     </group>
   );
 }

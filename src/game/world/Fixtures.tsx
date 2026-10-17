@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
@@ -64,35 +64,65 @@ function streetLightGeometry() {
   return { metal, lens };
 }
 
+const LIGHT_CHUNK = 110;
+const LIGHT_VISIBLE = 180;
+
 function StreetLights() {
   const galvanized = usePbrMaterial('metal_plate', {
     tileMeters: 1,
     color: '#a7abae',
     roughness: 0.6,
   });
-  const objects = useMemo(() => {
+  const chunks = useMemo(() => {
     const { metal, lens } = streetLightGeometry();
-    const matrices = streetLightPlacements();
     const lensMat = new THREE.MeshStandardMaterial({
       color: '#d9d6cc',
       roughness: 0.25,
       emissive: '#ffd9a0',
       emissiveIntensity: 0, // lit at night once the day/night cycle lands (Phase 5)
     });
-    return [metal, lens].map((geo, i) => {
-      const inst = new THREE.InstancedMesh(geo, i === 0 ? galvanized : lensMat, matrices.length);
-      matrices.forEach((m, k) => inst.setMatrixAt(k, m));
-      inst.castShadow = i === 0;
-      inst.receiveShadow = true;
-      inst.computeBoundingSphere();
-      return inst;
+    // Group lights into square chunks so distant ones (hundreds across the city) are skipped.
+    const byChunk = new Map<string, THREE.Matrix4[]>();
+    const p = new THREE.Vector3();
+    for (const m of streetLightPlacements()) {
+      p.setFromMatrixPosition(m);
+      const key = `${Math.floor(p.x / LIGHT_CHUNK)},${Math.floor(p.z / LIGHT_CHUNK)}`;
+      byChunk.set(key, [...(byChunk.get(key) ?? []), m]);
+    }
+    return [...byChunk].map(([key, matrices]) => {
+      const [cx, cz] = key.split(',').map(Number) as [number, number];
+      const group = new THREE.Group();
+      [metal, lens].forEach((geo, i) => {
+        const inst = new THREE.InstancedMesh(geo, i === 0 ? galvanized : lensMat, matrices.length);
+        matrices.forEach((m, k) => inst.setMatrixAt(k, m));
+        inst.castShadow = i === 0;
+        inst.receiveShadow = true;
+        inst.computeBoundingSphere();
+        group.add(inst);
+      });
+      return { group, x: (cx + 0.5) * LIGHT_CHUNK, z: (cz + 0.5) * LIGHT_CHUNK };
     });
   }, [galvanized]);
-  useEffect(() => () => objects.forEach((o) => o.geometry.dispose()), [objects]);
+  useEffect(
+    () => () => {
+      const first = chunks[0]?.group.children as THREE.Mesh[] | undefined;
+      first?.forEach((m) => m.geometry.dispose());
+    },
+    [chunks],
+  );
+  const last = useRef(0);
+  useFrame(({ camera, clock }) => {
+    if (clock.elapsedTime - last.current < 0.25) return;
+    last.current = clock.elapsedTime;
+    for (const c of chunks) {
+      c.group.visible =
+        Math.hypot(c.x - camera.position.x, c.z - camera.position.z) < LIGHT_VISIBLE;
+    }
+  });
   return (
     <>
-      {objects.map((o, i) => (
-        <primitive key={i} object={o} />
+      {chunks.map((c, i) => (
+        <primitive key={i} object={c.group} />
       ))}
     </>
   );

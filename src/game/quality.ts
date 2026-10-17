@@ -50,7 +50,7 @@ export const QUALITY_PRESETS: Record<QualityTier, QualitySettings> = {
     motionBlur: false,
     maxDrawCalls: 300,
     chunkRadius: 1,
-    buildingDetailDistance: 45,
+    buildingDetailDistance: 35,
   },
   medium: {
     tier: 'medium',
@@ -68,7 +68,7 @@ export const QUALITY_PRESETS: Record<QualityTier, QualitySettings> = {
     motionBlur: false,
     maxDrawCalls: 500,
     chunkRadius: 2,
-    buildingDetailDistance: 70,
+    buildingDetailDistance: 50,
   },
   high: {
     tier: 'high',
@@ -86,7 +86,7 @@ export const QUALITY_PRESETS: Record<QualityTier, QualitySettings> = {
     motionBlur: false,
     maxDrawCalls: 800,
     chunkRadius: 2,
-    buildingDetailDistance: 100,
+    buildingDetailDistance: 70,
   },
   ultra: {
     tier: 'ultra',
@@ -104,7 +104,7 @@ export const QUALITY_PRESETS: Record<QualityTier, QualitySettings> = {
     motionBlur: true,
     maxDrawCalls: 1200,
     chunkRadius: 3,
-    buildingDetailDistance: 140,
+    buildingDetailDistance: 100,
   },
 };
 

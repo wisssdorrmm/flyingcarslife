@@ -3,6 +3,7 @@ import {
   BLOCKS,
   buildingOffset,
   CURB_HEIGHT,
+  districtAt,
   END_BUILDING_DEPTH,
   EXTENT,
   ROADS,
@@ -96,10 +97,12 @@ function int(r: () => number, min: number, max: number): number {
   return min + Math.floor(r() * (max - min + 1));
 }
 
-/** Taller buildings toward the middle of downtown. */
+/** Taller buildings downtown, lower toward the waterfront and the west side. */
 function floorsAt(r: () => number, x: number, z: number, corner: boolean): number {
-  const centrality = 1 - Math.min(1, Math.hypot(x, z) / 220);
-  return (corner ? 5 : 3) + Math.round(centrality * 2) + int(r, 0, 3);
+  const centrality = 1 - Math.min(1, Math.hypot(x, z) / 260);
+  const floors =
+    (corner ? 5 : 3) + districtAt(x, z).heightBias + Math.round(centrality) + int(r, 0, 3);
+  return Math.max(3, floors);
 }
 
 /**

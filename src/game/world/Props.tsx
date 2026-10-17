@@ -75,23 +75,30 @@ function TreePits({ trees }: { trees: THREE.Matrix4[] }) {
 }
 
 /** Props are grouped into square chunks so far-away ones can be hidden cheaply. */
-const CHUNK = 110;
-/** How far (m) each prop stays visible; trees are the heaviest. */
-const VISIBLE_DISTANCE: Record<PropName, number> = {
-  tree: 120,
-  hydrant: 90,
-  trashCan: 90,
+const CHUNK: Record<PropName, number> = {
+  tree: 55,
+  hydrant: 110,
+  trashCan: 110,
   bench: 110,
   utilityBox: 110,
-  manhole: 70,
+  manhole: 110,
+};
+/** How far (m) each prop stays visible; trees are the heaviest. */
+const VISIBLE_DISTANCE: Record<PropName, number> = {
+  tree: 75,
+  hydrant: 55,
+  trashCan: 55,
+  bench: 80,
+  utilityBox: 70,
+  manhole: 50,
 };
 
 function PropInstances({ name, matrices }: { name: PropName; matrices: THREE.Matrix4[] }) {
   const def: PropDef = PROPS[name];
   const gltf = useGLTF(modelUrl(def.model), false, true);
-  // Leafy trees are the heaviest shadow casters; phones skip them.
+  // Leafy trees are the heaviest shadow casters; only High and Ultra draw their shadows.
   const tier = useSettings((s) => s.quality.tier);
-  const castShadow = name !== 'tree' || tier !== 'low';
+  const castShadow = name !== 'tree' || tier === 'high' || tier === 'ultra';
   const chunks = useMemo(() => {
     const offset = def.offset ? new THREE.Matrix4().makeTranslation(...def.offset) : undefined;
     const parts = mergePartsByMaterial(extractParts(gltf.scene, def.include, offset));
@@ -99,24 +106,25 @@ function PropInstances({ name, matrices }: { name: PropName; matrices: THREE.Mat
     const p = new THREE.Vector3();
     for (const m of matrices) {
       p.setFromMatrixPosition(m);
-      const key = `${Math.floor(p.x / CHUNK)},${Math.floor(p.z / CHUNK)}`;
+      const size = CHUNK[name];
+      const key = `${Math.floor(p.x / size)},${Math.floor(p.z / size)}`;
       byChunk.set(key, [...(byChunk.get(key) ?? []), m]);
     }
     return [...byChunk].map(([key, ms]) => {
       const [cx, cz] = key.split(',').map(Number) as [number, number];
       return {
         group: instanceParts(parts, ms, { castShadow }),
-        center: new THREE.Vector2((cx + 0.5) * CHUNK, (cz + 0.5) * CHUNK),
+        center: new THREE.Vector2((cx + 0.5) * CHUNK[name], (cz + 0.5) * CHUNK[name]),
       };
     });
-  }, [gltf, def, matrices, castShadow]);
+  }, [gltf, def, matrices, castShadow, name]);
   useEffect(() => () => chunks.forEach((c) => disposeGroup(c.group)), [chunks]);
 
   const last = useRef(0);
   useFrame(({ camera, clock }) => {
     if (clock.elapsedTime - last.current < 0.25) return;
     last.current = clock.elapsedTime;
-    const reach = VISIBLE_DISTANCE[name] + CHUNK * 0.71;
+    const reach = VISIBLE_DISTANCE[name] + CHUNK[name] * 0.71;
     for (const c of chunks) {
       c.group.visible =
         Math.hypot(c.center.x - camera.position.x, c.center.y - camera.position.z) < reach;
