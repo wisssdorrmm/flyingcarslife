@@ -6,6 +6,7 @@ import { useSettings } from './game/store/settings';
 import { detectDevice } from './game/quality';
 import { TouchControls } from './ui/controls/TouchControls';
 import { Hud } from './ui/hud/Hud';
+import { MissionUi } from './ui/missions/MissionUi';
 import { MapScreen } from './ui/map/MapScreen';
 import { PauseMenu } from './ui/menus/PauseMenu';
 import { LoadingScreen } from './ui/menus/LoadingScreen';
@@ -28,6 +29,7 @@ export default function App() {
         <Game />
       </Suspense>
       {!freecam && <Hud touch={showTouch} />}
+      {!freecam && <MissionUi />}
       <MapScreen />
       <PauseMenu />
       <LoadingScreen />

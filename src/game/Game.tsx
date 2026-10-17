@@ -5,6 +5,7 @@ import { Physics, RigidBody, useRapier, type RapierRigidBody } from '@react-thre
 import * as THREE from 'three';
 import { PHYSICS, WORLD_LIGHTING } from './config';
 import { City } from './city/City';
+import { MissionSystem } from './missions/MissionSystem';
 import { useSettings } from './store/settings';
 import { useUi } from './store/ui';
 import { DesktopInput } from './systems/DesktopInput';
@@ -60,6 +61,7 @@ export default function Game() {
         >
           <SkyAndSun />
           <City />
+          {!freecam && <MissionSystem />}
           {!freecam && <ChaseCamera />}
           {debug && <PhysicsProbe />}
           {debug && <PhysicsDebugHook />}

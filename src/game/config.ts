@@ -623,3 +623,105 @@ export const PHONE_CAM = {
   videoBitsPerSecond: 6_000_000,
   watermark: 'Flying Cars Life',
 } as const;
+
+/** Police: wanted stars, pursuit, busted and evading (CLAUDE.md §6.3 and §6.2 point 5). */
+export const POLICE = {
+  /** Stars an offense brings when police see it (a cruiser or patrol car within sightRange). */
+  offenses: { ramPolice: 2, hitPedestrian: 2, crash: 1 },
+  /** Hitting a police car this hard (N·s) is ramming; hitting traffic this hard is reckless. */
+  ramImpulse: 3500,
+  crashImpulse: 9000,
+  /** …but only when you were driving at least this fast (m/s): cruisers bumping you isn't you. */
+  ramSpeed: 8,
+  crashSpeed: 12,
+  /** Police see you within this range with a clear line of sight (m). */
+  sightRange: 75,
+  /** Out of every unit's sight this long (s) and the stars fade; in the air at 1–3 stars, this. */
+  escapeSeconds: 12,
+  airEscapeSeconds: 10,
+  /** Boxed in: a unit this close (m) while you're this slow (m/s) for this long (s) = busted. */
+  catchRange: 7,
+  catchMaxSpeed: 2.5,
+  catchSeconds: 3,
+  /** Busted costs this per star; evading pays this per star. */
+  bustedFeePerStar: 250,
+  evadeRewardPerStar: 150,
+  /** Cruisers chasing you per star level (index = stars), capped per quality tier. */
+  unitsPerStar: [0, 1, 2, 3, 4, 5] as const,
+  maxUnits: { low: 2, medium: 3, high: 4, ultra: 5 },
+  /** New cruisers appear on roads this far away (m); far-off ones are removed. */
+  spawnDistance: [90, 150] as [number, number],
+  despawnDistance: 320,
+  /** Seconds between road-route recomputes while chasing; drive straight at you inside this (m). */
+  repathSeconds: 1.2,
+  directRange: 30,
+  /** A cruiser on its roof or side this long (s) is wrecked. */
+  wreckedSeconds: 2.5,
+  /** Helicopter from this many stars: height above you (m), top speed (m/s). */
+  heli: { fromStars: 4, height: 30, speed: 45, sightRange: 160 },
+  /** Patrol cars in traffic when you're not wanted (they're the witnesses), by tier. */
+  patrols: { low: 1, medium: 2, high: 2, ultra: 3 },
+} as const;
+
+/** Missions: level-by-level heists that escalate (src/game/missions). */
+export const MISSIONS = {
+  /** Mission-only places (lat, lon); landmarks from city/geo.ts are usable by id too. */
+  places: {
+    /** Cargo plane parking on The Embarcadero (wide and straight for the take-off roll). */
+    airstrip: [37.8069, -122.4041],
+    /** Russian Hill garage. */
+    hideout: [37.8002, -122.4176],
+    /** Warehouse below Telegraph Hill. */
+    hideout2: [37.8018, -122.4012],
+    /** Bank by the Pyramid. */
+    bank: [37.7962, -122.4031],
+  } as Record<string, [number, number]>,
+  /** Places snap to the nearest road within this range (m). */
+  snapRange: 120,
+  /** Marker radius (m), and the speed (m/s) under which the car counts as stopped. */
+  markerRadius: 7,
+  stopSpeed: 1.6,
+  /** Passengers walk to and from the car at this speed (m/s), starting this far away (m). */
+  walkSpeed: 1.8,
+  walkFrom: 7,
+  hijack: {
+    /** Stay within this distance (m) of the plane's door… */
+    doorRange: 7,
+    /** …and within this speed (m/s) of the plane's (so you can catch it while it rolls). */
+    matchSpeed: 4,
+    /** Take-off roll: acceleration (m/s²), lift-off speed (m/s) and climb rate (m/s). */
+    rollAccel: 2.4,
+    liftoffSpeed: 36,
+    climbRate: 9,
+  },
+  catch: {
+    /** Pull up within this range (m) at under this speed (m/s) to grab them. */
+    range: 4.5,
+    maxSpeed: 5,
+    /** They sidestep a car coming in faster than that. */
+    dodgeSpeed: 6,
+    /** Seconds they run before they can be grabbed (they start right by the car). */
+    headStart: 1.5,
+  },
+  /** Police gunfire (only while a mission turns it on). */
+  fire: {
+    /** Units shoot from within this range (m) with a clear line of sight. */
+    range: 55,
+    /** Armor lost per hit, and how accuracy falls off with distance and your speed. */
+    damagePerHit: 5,
+    accuracyFalloff: 0.012,
+    speedDodge: 0.012,
+    tracerSpeed: 260,
+  },
+  /** Endless contracts after the handcrafted levels: per-tier multipliers and caps. */
+  contracts: {
+    timeFactorPerTier: 0.93,
+    rewardFactorPerTier: 1.18,
+    maxFireRate: 1.6,
+    maxAccuracy: 0.45,
+  },
+  /** Rating: 3 stars needs this share of time left and armor left; 2 stars half of it. */
+  rating: { timeLeft: 0.35, armorLeft: 0.6 },
+  /** When the mission has no police system to escape from, "lose the police" lasts this long (s). */
+  fallbackEscapeSeconds: 25,
+} as const;

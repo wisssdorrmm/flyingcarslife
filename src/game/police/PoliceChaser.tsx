@@ -35,9 +35,15 @@ export function PoliceChaser({
   start,
   heading,
   nav,
+  navCrawl = true,
+  onBody,
 }: {
   start: [number, number, number];
   heading: number;
+  /** Crawl while following `nav` waypoints (tight structures); off for road pursuits. */
+  navCrawl?: boolean;
+  /** Optional: receives the cruiser's rigid body once it exists (null on unmount). */
+  onBody?: (rb: RapierRigidBody | null) => void;
   /** Optional waypoint finder (e.g. the car park's ramps); null = head straight for the target. */
   nav?: (
     p: { x: number; y: number; z: number },
@@ -105,6 +111,11 @@ export function PoliceChaser({
     };
   }, [world]);
 
+  useEffect(() => {
+    onBody?.(chassis.current);
+    return () => onBody?.(null);
+  }, [onBody]);
+
   const tmp = useMemo(
     () => ({ q: new THREE.Quaternion(), f: new THREE.Vector3(), target: new THREE.Vector3() }),
     [],
@@ -148,7 +159,7 @@ export function PoliceChaser({
     let throttle = dist > stopAt + 12 ? 1 : THREE.MathUtils.clamp((dist - stopAt) / 12, 0, 1);
     if (dist < stopAt) throttle = speed > 0.5 ? -1 : 0;
     // Inside a structure (following waypoints): crawl, so it can make the turns.
-    if (via && speed > 6) throttle = speed > 8 ? -0.5 : 0;
+    if (via && navCrawl && speed > 6) throttle = speed > 8 ? -0.5 : 0;
     // Target behind us and close: back up turning the other way.
     if (Math.abs(angle) > 2.2 && dist < 25 && dist > stopAt) {
       throttle = -0.7;
