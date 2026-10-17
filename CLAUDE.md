@@ -231,11 +231,11 @@ nose-up to vertical and shoots into the sky tumbling; the police car drives to w
 3. ✅ **Driving / drift feel** — arcade handling, handbrake drifts, smoke, sparks, cones, drift score → cash, assists.
 4. ✅ **Traffic and pedestrians** — parked cars, AI traffic, buses, pedestrians.
 5. ✅ **HUD** per section 6.9. → *Stop and show the user.*
-6. **Police** per section 6.3.
-7. **Rocket launch flight** per section 6.2 (moved ahead of police at the user's request).
-8. **Goals and garage** per sections 6.4–6.5.
-9. **Billboards** per section 6.8.
-10. **Phone performance** — budgets in section 10.
+6. ✅ **Police** per section 6.3 (built with the missions system).
+7. ✅ **Rocket launch flight** per section 6.2 (moved ahead of police at the user's request).
+8. ✅ **Goals and garage** per sections 6.4–6.5.
+9. ✅ **Billboards** per section 6.8.
+10. ✅ **Phone performance** — budgets in section 10 (verify on real phones).
 
 Each step: `npm run build` passes, no console errors, checked at 375 px and desktop.
 
