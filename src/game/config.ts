@@ -172,6 +172,21 @@ export const WORLD_LIGHTING = {
   },
 } as const;
 
+/** OpenStreetMap city tiles (src/game/city/CityTiles.tsx). */
+export const CITY_STREAMING = {
+  /** Tiles whose square is within this distance (m) of the car are drawn. */
+  viewRadius: { low: 330, medium: 450, high: 600, ultra: 750 },
+  /** Loaded tiles are dropped once this much further than the view radius. */
+  unloadMargin: 150,
+  /** Tiles this close get trimesh colliders. */
+  physicsRadius: 140,
+  maxConcurrentLoads: 3,
+  /** Seconds between streaming checks. */
+  checkInterval: 0.3,
+  /** Tiles loaded around the spawn before the game starts (m). */
+  preloadRadius: 260,
+} as const;
+
 export const DEBUG_CAMERA = {
   start: [-34, 1.7, 10.5] as [number, number, number],
   lookAt: [10, 5, -2] as [number, number, number],

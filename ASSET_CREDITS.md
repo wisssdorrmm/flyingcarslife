@@ -1,5 +1,15 @@
 # Asset credits
 
+## Map and terrain data
+
+| Data | License | Used for |
+|---|---|---|
+| [OpenStreetMap](https://www.openstreetmap.org/copyright) — © OpenStreetMap contributors | ODbL 1.0 | Streets, buildings, parks, piers, signals, trees, tram and trolleybus routes (`npm run city:fetch` + `city:build`) |
+| [Terrarium elevation tiles](https://registry.opendata.aws/terrain-tiles/) (Mapzen / AWS Open Data; USGS 3DEP and others) | see the [attribution list](https://github.com/tilezen/joerd/blob/master/docs/attribution.md) | Hills and bay depth |
+
+The generated city tiles (`public/assets/city/`) are a Produced Work from OpenStreetMap data; the in-game credit
+"Map data © OpenStreetMap contributors" is shown on the loading screen.
+
 All assets below are **CC0** (public domain) from [Poly Haven](https://polyhaven.com). No attribution is
 required; we list them anyway. Downloaded by `npm run assets:fetch`, compressed by `npm run assets:compress`.
 

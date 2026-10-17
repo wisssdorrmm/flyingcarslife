@@ -162,7 +162,10 @@ export function DrivableCar({ id, position, heading, paint }: Props) {
     }
   });
 
+  const spawnedAt = useRef(performance.now());
   const onContactForce = (e: { totalForceMagnitude: number }) => {
+    // Settling onto the road after spawning isn't a crash.
+    if (performance.now() - spawnedAt.current < 2500) return;
     const impulse = e.totalForceMagnitude * PHYSICS.timeStep;
     if (impulse > VEHICLE.damageThreshold) {
       const s = sim.current;

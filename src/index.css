@@ -86,6 +86,13 @@ body,
   opacity: 0.6;
 }
 
+.loading-credit {
+  position: absolute;
+  bottom: max(16px, env(safe-area-inset-bottom));
+  font-size: 0.72rem;
+  opacity: 0.55;
+}
+
 .help-panel,
 .help-toggle {
   position: absolute;

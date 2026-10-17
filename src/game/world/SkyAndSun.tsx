@@ -5,7 +5,6 @@ import * as THREE from 'three';
 import { hdriUrl } from '../../lib/assets';
 import { WORLD_LIGHTING } from '../config';
 import { useSettings } from '../store/settings';
-import { Hills } from './Hills';
 
 const HDRI = 'kloofendal_48d_partly_cloudy_puresky';
 
@@ -70,7 +69,6 @@ export function SkyAndSun() {
         environmentRotation={rotation}
       />
       <Sun direction={sunDir} />
-      <Hills />
     </>
   );
 }
@@ -93,9 +91,11 @@ function Sun({ direction }: { direction: THREE.Vector3 }) {
     forward.normalize().multiplyScalar(extent * 0.4);
     const cx = Math.round((camera.position.x + forward.x) / texel) * texel;
     const cz = Math.round((camera.position.z + forward.z) / texel) * texel;
-    target.position.set(cx, 0, cz);
+    // Follow the camera's height too: the city climbs from the bay to ~100 m hilltops.
+    const cy = Math.round(camera.position.y / 4) * 4;
+    target.position.set(cx, cy, cz);
     target.updateMatrixWorld();
-    l.position.set(cx, 0, cz).addScaledVector(direction, 200);
+    l.position.set(cx, cy, cz).addScaledVector(direction, 200);
   });
 
   return (

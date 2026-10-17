@@ -4,22 +4,13 @@ import { Stats } from '@react-three/drei';
 import { Physics, RigidBody, useRapier, type RapierRigidBody } from '@react-three/rapier';
 import * as THREE from 'three';
 import { PHYSICS, WORLD_LIGHTING } from './config';
+import { City } from './city/City';
 import { useSettings } from './store/settings';
 import { DesktopInput } from './systems/DesktopInput';
 import { ChaseCamera } from './vehicles/ChaseCamera';
-import { DrivableCar } from './vehicles/DrivableCar';
-import { ParkedCars } from './vehicles/ParkedCars';
-import { PLAYER_CAR } from './vehicles/parkedLayout';
-import { Buildings } from './world/Buildings';
 import { DebugCamera } from './world/DebugCamera';
-import { Fixtures } from './world/Fixtures';
 import { PostFX } from './world/PostFX';
-import { Props } from './world/Props';
 import { SkyAndSun } from './world/SkyAndSun';
-import { GpsRoute } from './world/GpsRoute';
-import { Street } from './world/Street';
-import { StreetSigns } from './world/StreetSigns';
-import { WorldColliders } from './world/WorldColliders';
 
 const params = new URLSearchParams(window.location.search);
 /** `?debug&colliders` draws physics shapes. */
@@ -66,15 +57,7 @@ export default function Game() {
           paused={debug && pausePhysics}
         >
           <SkyAndSun />
-          <Street />
-          <Buildings />
-          <Fixtures />
-          <StreetSigns />
-          <GpsRoute />
-          <Props />
-          <ParkedCars />
-          <DrivableCar {...PLAYER_CAR} />
-          <WorldColliders />
+          <City />
           {!freecam && <ChaseCamera />}
           {debug && <PhysicsProbe />}
           {debug && <PhysicsDebugHook />}

@@ -4,9 +4,6 @@ import { QUALITY_TIERS } from './game/quality';
 import { useSettings } from './game/store/settings';
 import { detectDevice } from './game/quality';
 import { TouchControls } from './ui/controls/TouchControls';
-import { LocationLabel } from './ui/hud/LocationLabel';
-import { Minimap } from './ui/hud/Minimap';
-import { MapScreen } from './ui/map/MapScreen';
 import { Speedometer } from './ui/hud/Speedometer';
 import { Toasts } from './ui/hud/Toasts';
 import { LoadingScreen } from './ui/menus/LoadingScreen';
@@ -28,11 +25,8 @@ export default function App() {
       <Suspense fallback={null}>
         <Game />
       </Suspense>
-      <LocationLabel />
-      {!freecam && <Minimap />}
       <Toasts />
       <Speedometer />
-      <MapScreen />
       <LoadingScreen />
       {showTouch && !freecam && <TouchControls />}
       {debug && <DebugPanel />}

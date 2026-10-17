@@ -21,13 +21,14 @@ export function LoadingScreen() {
       aria-valuenow={Math.round(progress)}
     >
       <div className="loading-title">Flying Cars Life</div>
-      <div className="loading-sub">Harbor City</div>
+      <div className="loading-sub">San Francisco · North Beach</div>
       <div className="loading-bar">
         <div className="loading-fill" style={{ width: `${progress}%` }} />
       </div>
       <div className="loading-count">
         {Math.round(progress)}% · {loaded}/{Math.max(total, loaded)} files
       </div>
+      <div className="loading-credit">Map data © OpenStreetMap contributors</div>
     </div>
   );
 }
