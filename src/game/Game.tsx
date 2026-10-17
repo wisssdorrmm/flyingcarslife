@@ -21,6 +21,7 @@ import { Fixtures } from './world/Fixtures';
 import { PostFX } from './world/PostFX';
 import { Props } from './world/Props';
 import { SkyAndSun } from './world/SkyAndSun';
+import { GpsRoute } from './world/GpsRoute';
 import { Street } from './world/Street';
 import { StreetSigns } from './world/StreetSigns';
 import { WorldColliders } from './world/WorldColliders';
@@ -80,6 +81,7 @@ export default function Game() {
           <Fixtures />
           <StreetSigns />
           <PlaceSigns />
+          <GpsRoute />
           <Props />
           <ParkedCars />
           <DrivableCar {...PLAYER_CAR} />

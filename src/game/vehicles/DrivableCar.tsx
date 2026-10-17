@@ -15,6 +15,7 @@ import { stopEvSound, updateEvSound } from '../audio/evSound';
 import { HUD_UNITS, PHYSICS, VEHICLE } from '../config';
 import { cameraState, playerState } from '../player/playerState';
 import { useGame } from '../store/game';
+import { useNav } from '../store/nav';
 import { consumePress, input, readMove } from '../systems/input';
 import { buildDrivableCar, CAR_MODEL, type CarLook } from './carModel';
 import { vehicleState } from './vehicleState';
@@ -112,7 +113,8 @@ export function DrivableCar({ id, position, heading, paint }: Props) {
     let throttleIn = 0;
     let steerIn = 0;
     let handbrake = false;
-    if (driving) {
+    // No driving input while the map is open (the car rolls and brakes as if hands-off).
+    if (driving && !useNav.getState().mapOpen) {
       const m = readMove();
       throttleIn = m.y;
       steerIn = m.x;

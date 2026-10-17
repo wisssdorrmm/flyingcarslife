@@ -189,6 +189,7 @@ export const KEYMAP = {
   attack: ['KeyF'],
   reload: ['KeyR'],
   phone: ['KeyP'],
+  map: ['KeyM'],
 } as const;
 
 export const INPUT = {

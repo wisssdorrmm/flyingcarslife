@@ -14,6 +14,7 @@ import { modelUrl } from '../../lib/assets';
 import { BODY, INPUT, PHYSICS, PLAYER, PLAYER_ANIMATIONS } from '../config';
 import { useGame } from '../store/game';
 import { bmiOf, movementFactors, useLife } from '../store/life';
+import { useNav } from '../store/nav';
 import { vehicleState } from '../vehicles/vehicleState';
 import { streamCollidersAround } from '../world/colliderStreaming';
 import { consumePress, input, readMove } from '../systems/input';
@@ -98,7 +99,8 @@ export function Player() {
 
     // Target horizontal velocity from input, relative to the camera.
     // Menus (e.g. inside a shop) pause movement.
-    const move = useGame.getState().openPlaceId ? { x: 0, y: 0, magnitude: 0 } : readMove();
+    const menuOpen = useGame.getState().openPlaceId || useNav.getState().mapOpen;
+    const move = menuOpen ? { x: 0, y: 0, magnitude: 0 } : readMove();
     const sprinting = input.held.has('sprint') || input.sprintToggle;
     const walking =
       input.held.has('walk') ||
@@ -199,6 +201,7 @@ export function Player() {
           vehicleState,
           game: useGame,
           life: useLife,
+          nav: useNav,
         },
       });
     }

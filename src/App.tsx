@@ -6,6 +6,8 @@ import { detectDevice } from './game/quality';
 import { TouchControls } from './ui/controls/TouchControls';
 import { ControlsHelp } from './ui/hud/ControlsHelp';
 import { LocationLabel } from './ui/hud/LocationLabel';
+import { Minimap } from './ui/hud/Minimap';
+import { MapScreen } from './ui/map/MapScreen';
 import { Prompt } from './ui/hud/Prompt';
 import { Speedometer } from './ui/hud/Speedometer';
 import { StatusHud, Toasts } from './ui/hud/StatusHud';
@@ -31,10 +33,12 @@ export default function App() {
       </Suspense>
       <StatusHud />
       <LocationLabel />
+      {!freecam && <Minimap />}
       <Toasts />
       <Prompt />
       <Speedometer />
       <PlacePanel />
+      <MapScreen />
       <LoadingScreen />
       {showTouch && !freecam && <TouchControls />}
       <ControlsHelp freecam={freecam} />

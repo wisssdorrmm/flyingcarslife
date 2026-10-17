@@ -10,11 +10,7 @@ export function ControlsHelp({ freecam }: { freecam: boolean }) {
   const mode = useGame((s) => s.mode);
   if (!open) {
     return (
-      <button
-        className={`help-toggle${isTouch ? ' top' : ''}`}
-        onClick={() => setOpen(true)}
-        aria-label="Show controls"
-      >
+      <button className="help-toggle top" onClick={() => setOpen(true)} aria-label="Show controls">
         ?
       </button>
     );
@@ -54,12 +50,12 @@ export function ControlsHelp({ freecam }: { freecam: boolean }) {
       : [
           'Click the game to look with the mouse · Esc to release',
           'W A S D: move · Shift: sprint · Alt: walk',
-          'Space: jump',
+          'Space: jump · E: enter · M: map',
         ];
   }
 
   return (
-    <div className={`help-panel${isTouch ? ' top' : ''}`}>
+    <div className="help-panel top">
       <button className="help-close" onClick={() => setOpen(false)} aria-label="Hide controls">
         ×
       </button>
