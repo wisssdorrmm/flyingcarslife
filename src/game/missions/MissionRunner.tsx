@@ -4,7 +4,7 @@ import { useRapier } from '@react-three/rapier';
 import * as THREE from 'three';
 import { useCity, type City } from '../city/cityData';
 import { MISSIONS } from '../config';
-import { currentPose, useNav } from '../store/nav';
+import { useNav } from '../store/nav';
 import { toast } from '../store/toasts';
 import { useUi } from '../store/ui';
 import { vehicleState } from '../vehicles/vehicleState';
@@ -54,7 +54,6 @@ interface Run {
   lastBeep: number;
   hudIn: number;
   gpsIn: number;
-  navIn: number;
 }
 
 const TINTS = ['#ffffff', '#c9d8ff', '#ffd2c2', '#d4f0d0', '#f3e2b8'];
@@ -176,7 +175,6 @@ export function MissionRunner() {
       lastBeep: -1,
       hudIn: 0,
       gpsIn: 0,
-      navIn: 0,
     };
     sfx.start();
     enterStage(run.current, 0, city);
@@ -271,17 +269,6 @@ export function MissionRunner() {
     if (r.hudIn <= 0) {
       r.hudIn = 0.1;
       pushHud(r, stage);
-    }
-    // Keep the GPS on the objective (it clears itself on arrival, or the player may change it).
-    r.navIn -= dt;
-    if (r.navIn <= 0) {
-      r.navIn = 0.5;
-      const live = r.def.stages[r.stage]!;
-      const t = gpsTarget(r, live, city);
-      const wp = useNav.getState().waypoint;
-      if (t && flat(tmp.car, t.x, t.z) > 30 && (!wp || Math.hypot(wp.x - t.x, wp.z - t.z) > 8)) {
-        useNav.getState().setWaypoint({ x: t.x, z: t.z, label: t.label });
-      }
     }
   });
 
@@ -607,20 +594,6 @@ function step(r: Run, stage: Stage, ctx: Ctx): StepResult {
 const tmp2 = { door: new THREE.Vector3(), vel: new THREE.Vector3() };
 
 function pushHud(r: Run, stage: Stage): void {
-  let target: { angle: number; dist: number } | null = null;
-  const city = useCity.getState().city;
-  const pose = currentPose();
-  const t = city ? gpsTarget(r, stage, city) : null;
-  if (t && pose) {
-    const dx = t.x - pose.x;
-    const dz = t.z - pose.z;
-    const dist = Math.hypot(dx, dz);
-    // + = to the right of the car's heading (right of (fx, fz) is (−fz, fx)).
-    target = {
-      dist,
-      angle: Math.atan2(-(dx * -pose.fz + dz * pose.fx), dx * pose.fx + dz * pose.fz),
-    };
-  }
   let detail: string | null = null;
   let hold: number | null = null;
   switch (stage.kind) {
@@ -655,7 +628,6 @@ function pushHud(r: Run, stage: Stage): void {
     timer: r.timer,
     timerMax: r.timerMax,
     detail,
-    target,
     hold,
     armor: r.armor,
   });

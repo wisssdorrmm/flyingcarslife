@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { LANDMARKS, type Landmark } from '../../game/city/geo';
+import { useCareer } from '../../game/store/career';
+import { useGoals } from '../../game/store/goals';
 import { currentPose, useNav } from '../../game/store/nav';
 import { formatDistance } from '../map/format';
 
@@ -17,11 +19,29 @@ export function WhatsNext() {
     const id = window.setInterval(() => {
       const pose = currentPose();
       if (!pose) return;
+      // Nearest photo spot not taken yet, or time trial not finished yet.
+      const photos = useCareer.getState().photos;
+      const done = useCareer.getState().trials;
+      const options: Landmark[] = [
+        ...LANDMARKS.filter((l) => !photos.includes(l.id)).map((l) => ({
+          ...l,
+          name: `Photo: ${l.name}`,
+        })),
+        ...useGoals
+          .getState()
+          .trials.filter((t) => done[t.id] === undefined)
+          .map((t) => ({
+            id: t.id,
+            name: `Time trial: ${t.name}`,
+            blurb: '',
+            x: t.start.x,
+            z: t.start.z,
+          })),
+      ];
       let best: Landmark | null = null;
       let bestD = Infinity;
-      for (const l of LANDMARKS) {
+      for (const l of options) {
         const d = Math.hypot(l.x - pose.x, l.z - pose.z);
-        if (d < 30) visited.add(l.id);
         if (!visited.has(l.id) && d < bestD) {
           best = l;
           bestD = d;

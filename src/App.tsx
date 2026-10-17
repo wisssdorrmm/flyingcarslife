@@ -8,7 +8,9 @@ import { TouchControls } from './ui/controls/TouchControls';
 import { Hud } from './ui/hud/Hud';
 import { MissionUi } from './ui/missions/MissionUi';
 import { MapScreen } from './ui/map/MapScreen';
+import { Garage, GarageUnlocks } from './ui/menus/Garage';
 import { PauseMenu } from './ui/menus/PauseMenu';
+import { RaceMenu } from './ui/menus/RaceMenu';
 import { LoadingScreen } from './ui/menus/LoadingScreen';
 
 // The 3D engine is split out so the shell paints instantly while three/rapier download.
@@ -32,6 +34,9 @@ export default function App() {
       {!freecam && <MissionUi />}
       <MapScreen />
       <PauseMenu />
+      <RaceMenu />
+      <Garage />
+      <GarageUnlocks />
       <LoadingScreen />
       {showTouch && !freecam && <TouchControls />}
       {debug && <DebugPanel />}

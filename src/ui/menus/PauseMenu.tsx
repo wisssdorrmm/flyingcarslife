@@ -1,5 +1,8 @@
 import { useEffect } from 'react';
+import { useCity } from '../../game/city/cityData';
+import { LANDMARKS } from '../../game/city/geo';
 import { QUALITY_TIERS } from '../../game/quality';
+import { useCareer } from '../../game/store/career';
 import { useNav } from '../../game/store/nav';
 import { useSettings } from '../../game/store/settings';
 import { useUi } from '../../game/store/ui';
@@ -50,7 +53,16 @@ export function PauseMenu() {
             Resume
           </button>
           <button onClick={resetCar}>Reset car</button>
+          <button
+            onClick={() => {
+              setOpen(false);
+              useUi.getState().setGarageOpen(true);
+            }}
+          >
+            Garage
+          </button>
         </div>
+        <Progress />
 
         <h3>Graphics</h3>
         <div className="menu-row">
@@ -78,5 +90,36 @@ export function PauseMenu() {
         </p>
       </div>
     </div>
+  );
+}
+
+/** Exploration progress: roads discovered, photos, trials. */
+function Progress() {
+  const streets = useCareer((s) => s.discovered.length);
+  const photos = useCareer((s) => s.photos.length);
+  const trials = useCareer((s) => Object.keys(s.trials).length);
+  const total = useCity((s) => s.city?.index.streets.length ?? 0);
+  return (
+    <>
+      <h3>Progress</h3>
+      <dl className="menu-keys">
+        <div>
+          <dt>Roads discovered</dt>
+          <dd>
+            {streets}/{total} ({total ? Math.round((streets / total) * 100) : 0}%)
+          </dd>
+        </div>
+        <div>
+          <dt>Photo spots</dt>
+          <dd>
+            {photos}/{LANDMARKS.length}
+          </dd>
+        </div>
+        <div>
+          <dt>Time trials finished</dt>
+          <dd>{trials}/3</dd>
+        </div>
+      </dl>
+    </>
   );
 }

@@ -80,10 +80,6 @@ export const sfx = {
   /** A shot `distance` m away; `pan` −1..1 from where it came. */
   shot: (distance: number, pan: number) =>
     burst(0.16, 1400, 0.7, Math.max(0.05, 0.6 - distance * 0.008), pan),
-  boom: () => {
-    burst(1.4, 120, 0.6, 1.2);
-    burst(0.5, 600, 0.8, 0.6);
-  },
   hit: () => {
     burst(0.08, 3200, 2, 0.35);
     tone(2400, 0, 0.06, 'square', 0.04);

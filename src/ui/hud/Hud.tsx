@@ -8,9 +8,12 @@ import { Toasts } from './Toasts';
 import { TopBar } from './TopBar';
 import { WantedStars } from './WantedStars';
 import { WhatsNext } from './WhatsNext';
+import { PhotoFlash, TrialHud } from './TrialHud';
+import { useGoals } from '../../game/store/goals';
 
 /** The driving HUD, laid out per CLAUDE.md §6.9. `touch` makes room for the touch controls. */
 export function Hud({ touch }: { touch: boolean }) {
+  const trialActive = useGoals((s) => !!s.active);
   return (
     <div className={`hud${touch ? ' hud-touch' : ''}`}>
       <div className="hud-zone hud-tl">
@@ -18,9 +21,8 @@ export function Hud({ touch }: { touch: boolean }) {
         <WantedStars />
         <DriftScore />
       </div>
-      <div className="hud-zone hud-tc">
-        <WhatsNext />
-      </div>
+      <div className="hud-zone hud-tc">{trialActive ? <TrialHud /> : <WhatsNext />}</div>
+      <PhotoFlash />
       <div className="hud-zone hud-tr">
         <TopBar />
       </div>

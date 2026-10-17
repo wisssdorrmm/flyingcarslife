@@ -95,8 +95,7 @@ export function Hijack({ city }: { city: City }) {
       player.setCar({
         model: a.police ? 'police' : 'sedan',
         paint,
-        // Every car can fly except police cruisers.
-        canFly: !a.police,
+        canFly: false,
         position: [a.x, city.heightAt(a.x, a.z) + 0.35, a.z],
         heading: a.heading,
         speed: a.v * 0.5,

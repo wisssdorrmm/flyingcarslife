@@ -6,8 +6,12 @@ export type PlayerCarModel = 'ev' | 'sedan' | 'police';
 export interface PlayerCarSpec {
   /** Changes whenever the player switches cars (remounts the drivable car). */
   key: number;
+  /** Garage car id (sets power and flight time); absent for cars taken from traffic. */
+  carId?: string;
   model: PlayerCarModel;
   paint: string;
+  /** Wheel finish id (GARAGE.wheels). */
+  wheels?: string;
   /** Only flying cars can rocket-launch. */
   canFly: boolean;
   position: [number, number, number];

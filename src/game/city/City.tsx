@@ -5,6 +5,7 @@ import { RooftopCarPark } from '../debug/RooftopCarPark';
 import { carParkBase, carParkWaypoint } from '../debug/carParkLayout';
 import { useTestScene } from '../debug/testScenes';
 import { PoliceChaser } from '../police/PoliceChaser';
+import { Goals } from '../goals/Goals';
 import { usePlayerCar } from '../store/playerCar';
 import { DrivableCar } from '../vehicles/DrivableCar';
 import { Hijack } from '../vehicles/Hijack';
@@ -69,6 +70,7 @@ export function City() {
       {groundReady && <Traffic city={city} />}
       {groundReady && <Pedestrians city={city} />}
       <LeftCars />
+      {groundReady && <Goals city={city} />}
       {groundReady && <Hijack city={city} />}
       {groundReady && car && (
         <DrivableCar

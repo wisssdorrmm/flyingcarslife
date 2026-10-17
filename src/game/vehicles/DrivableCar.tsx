@@ -371,16 +371,6 @@ export function DrivableCar({
       bodyHandle: rb.handle,
       speed: 0,
       paint: String(paint),
-      hitBy: (point, damage) => {
-        // Dent toward the car's center from where the bullet struck.
-        const t = rb.translation();
-        const r = rb.rotation();
-        const inv = new THREE.Quaternion(r.x, r.y, r.z, r.w).invert();
-        const local = point.clone().sub(new THREE.Vector3(t.x, t.y, t.z)).applyQuaternion(inv);
-        const dir = local.clone().setY(0).normalize().negate();
-        if (local.y > 0.15) deformer.hit(local, dir, 0.25);
-        sim.current.damage = Math.min(100, sim.current.damage + damage);
-      },
       teleport: (x, y, z, h) => {
         flight.reset(rb);
         rb.setTranslation({ x, y, z }, true);
