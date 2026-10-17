@@ -11,6 +11,7 @@ import { MapScreen } from './ui/map/MapScreen';
 import { Garage, GarageUnlocks } from './ui/menus/Garage';
 import { PauseMenu } from './ui/menus/PauseMenu';
 import { RaceMenu } from './ui/menus/RaceMenu';
+import { LoadError } from './ui/menus/LoadError';
 import { LoadingScreen } from './ui/menus/LoadingScreen';
 
 // The 3D engine is split out so the shell paints instantly while three/rapier download.
@@ -27,9 +28,11 @@ export default function App() {
 
   return (
     <div className="app">
-      <Suspense fallback={null}>
-        <Game />
-      </Suspense>
+      <LoadError>
+        <Suspense fallback={null}>
+          <Game />
+        </Suspense>
+      </LoadError>
       {!freecam && <Hud touch={showTouch} />}
       {!freecam && <MissionUi />}
       <MapScreen />
