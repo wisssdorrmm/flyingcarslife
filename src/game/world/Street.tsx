@@ -16,7 +16,7 @@ import {
 import { STYLE } from '../config';
 import { makeWearTexture } from './decalAtlas';
 import { addSlabSeams, usePbrMaterial } from './materials';
-import { hashString, seeded } from './rand';
+import { hashString, seeded } from '../../lib/rand';
 import { Palms } from './Palms';
 import { StreetWear } from './StreetWear';
 

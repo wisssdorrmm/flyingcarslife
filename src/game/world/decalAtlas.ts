@@ -4,7 +4,7 @@
  * single texture and material. Each cell keeps a transparent border so mipmaps don't bleed.
  */
 import * as THREE from 'three';
-import { range, seeded } from './rand';
+import { range, seeded } from '../../lib/rand';
 
 export type DecalKind =
   // Road

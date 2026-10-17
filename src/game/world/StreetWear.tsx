@@ -30,7 +30,7 @@ import {
   type DecalKind,
 } from './decalAtlas';
 import { propPlacements } from './furnitureLayout';
-import { hashString, range, seeded, weighted } from './rand';
+import { hashString, range, seeded, weighted } from '../../lib/rand';
 
 /** The sidewalk slab's bevel puts its walking surface 2 cm above CURB_HEIGHT. */
 export const SLAB_TOP = CURB_HEIGHT + 0.02;

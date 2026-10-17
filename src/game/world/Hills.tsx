@@ -8,7 +8,7 @@ import { useEffect, useMemo } from 'react';
 import * as THREE from 'three';
 import { STYLE, WORLD_LIGHTING } from '../config';
 import { EXTENT } from './cityPlan';
-import { seeded } from './rand';
+import { seeded } from '../../lib/rand';
 
 const H = STYLE.hills;
 /** Terrain starts just past the buildings that close off each road end. */

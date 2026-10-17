@@ -8,7 +8,7 @@
 import * as THREE from 'three';
 import { STYLE } from '../config';
 import { SHORT_PALM_HEIGHT, TALL_PALM_HEIGHT } from './furnitureLayout';
-import { seeded } from './rand';
+import { seeded } from '../../lib/rand';
 
 const ATLAS = 1024;
 
