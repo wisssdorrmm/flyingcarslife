@@ -517,9 +517,15 @@ export const BILLBOARDS = {
   lift: 5.5,
   /** Empty slots rotate the house creatives this often (s). */
   rotateSeconds: 8,
-  /** House creatives shown in empty slots. */
+  /** House creatives shown in empty slots (the first is the top advertiser: shown most often). */
   house: [
-    { name: 'BIZZSMS', tagline: 'Bulk SMS that just works', bg: '#1d3fbf', fg: '#ffffff', accent: '#ffd166' },
+    {
+      name: 'BIZZSMS.NG',
+      tagline: 'Bulk SMS platform · reach thousands instantly',
+      bg: '#1d3fbf',
+      fg: '#ffffff',
+      accent: '#ffd166',
+    },
     { name: 'Veyra', tagline: 'Style that moves with you', bg: '#111317', fg: '#f5e9d7', accent: '#c9a227' },
     { name: 'Nariesa', tagline: 'Naturally radiant skincare', bg: '#f6d6e0', fg: '#4a1d33', accent: '#c2457a' },
     { name: 'Bejite', tagline: 'Fresh finds, every day', bg: '#16a34a', fg: '#ffffff', accent: '#fde047' },

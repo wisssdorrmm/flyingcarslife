@@ -96,6 +96,9 @@ function placeSlots(city: City): Slot[] {
 
 const today = () => new Date().toISOString().slice(0, 10);
 
+/** Creative order for empty boards: 0 = top advertiser, 4 = "Advertise here". */
+const ROTATION = [0, 1, 0, 2, 0, 3, 0, 4];
+
 /**
  * Billboards (CLAUDE.md §6.8): roadside boards along the main roads. A slot booked in
  * src/data/billboards.json (and in its date range) shows that image and opens its link on click;
@@ -207,7 +210,8 @@ export function Billboards({ city }: { city: City }) {
     const counts = inst.boards.map(() => 0);
     slots.forEach((s, i) => {
       if (booked.has(s.id)) return;
-      const k = (i + step) % inst.boards.length;
+      // The top advertiser (creative 0) shows on every other board.
+      const k = ROTATION[(i + step) % ROTATION.length]!;
       inst.boards[k]!.setMatrixAt(counts[k]!++, inst.at(s));
     });
     inst.boards.forEach((b, k) => {

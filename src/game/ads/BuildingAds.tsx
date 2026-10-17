@@ -12,6 +12,25 @@ import {
   type BuildingAdEntry,
 } from './buildingAdsData';
 
+/** Draws centered text, shrinking the font so it fits within `maxW` pixels. */
+function fit(
+  g: CanvasRenderingContext2D,
+  text: string,
+  x: number,
+  y: number,
+  size: number,
+  weight: number,
+  maxW: number,
+): void {
+  let s = size;
+  g.font = `${weight} ${s}px system-ui, sans-serif`;
+  while (s > 10 && g.measureText(text).width > maxW) {
+    s *= 0.92;
+    g.font = `${weight} ${Math.round(s)}px system-ui, sans-serif`;
+  }
+  g.fillText(text, x, y);
+}
+
 /** Facade banner art: brand, category and tagline (or the "available" card). */
 function bannerTexture(ad: BuildingAdEntry | null, aspect: number): THREE.CanvasTexture {
   const h = 512;
@@ -27,14 +46,11 @@ function bannerTexture(ad: BuildingAdEntry | null, aspect: number): THREE.Canvas
     g.fillStyle = ad.colors.accent;
     g.fillRect(0, h - 40, w, 40);
     g.fillStyle = ad.colors.fg;
-    g.font = `800 ${Math.round(h * 0.3)}px system-ui, sans-serif`;
-    g.fillText(ad.brand, w / 2, h * 0.45);
-    g.font = `600 ${Math.round(h * 0.09)}px system-ui, sans-serif`;
-    g.fillText(ad.tagline, w / 2, h * 0.62);
+    fit(g, ad.brand, w / 2, h * 0.45, Math.round(h * 0.3), 800, w * 0.9);
+    fit(g, ad.tagline, w / 2, h * 0.62, Math.round(h * 0.09), 600, w * 0.9);
     if (!ad.category.startsWith('PLACEHOLDER')) {
       g.fillStyle = ad.colors.accent;
-      g.font = `700 ${Math.round(h * 0.07)}px system-ui, sans-serif`;
-      g.fillText(ad.category.toUpperCase(), w / 2, h * 0.76);
+      fit(g, ad.category.toUpperCase(), w / 2, h * 0.76, Math.round(h * 0.07), 700, w * 0.88);
     }
   } else {
     g.fillStyle = '#0d1b22';
@@ -135,7 +151,10 @@ function AdBuildingView({ p }: { p: AdPlacement }) {
  */
 export function BuildingAds({ city }: { city: City }) {
   const tier = useSettings((s) => s.quality.tier);
-  const placements = useMemo(() => assignBuildingAds(city.index.adBuildings ?? []), [city]);
+  const placements = useMemo(
+    () => assignBuildingAds(city.index.adBuildings ?? [], city.index.spawn),
+    [city],
+  );
   const [shown, setShown] = useState<AdPlacement[]>([]);
   const pos = useMemo(() => new THREE.Vector3(), []);
   const timer = useRef(0);

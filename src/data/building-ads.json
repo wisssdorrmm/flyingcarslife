@@ -1,16 +1,21 @@
 [
   {
     "building_id": "",
-    "brand": "BIZZSMS",
-    "category": "Bulk SMS",
-    "tagline": "Bulk SMS that just works",
-    "description": "Send bulk SMS to thousands of customers in seconds: promotions, alerts, OTPs and reminders, with delivery reports and simple pricing.",
-    "website": "",
+    "brand": "BIZZSMS.NG",
+    "category": "Send SMS to thousands of customers instantly",
+    "tagline": "Bulk SMS platform",
+    "description": "bizzsms.ng is a bulk SMS platform: send one message to thousands of phone numbers in seconds. Use it for promotions, alerts, OTP codes and reminders, with delivery reports and simple pricing.",
+    "website": "https://bizzsms.ng",
     "contact": "wisdomudoudo24@gmail.com",
     "logo": "",
-    "colors": { "bg": "#1d3fbf", "fg": "#ffffff", "accent": "#ffd166" },
+    "colors": {
+      "bg": "#1d3fbf",
+      "fg": "#ffffff",
+      "accent": "#ffd166"
+    },
     "start_date": "2026-01-01",
-    "end_date": "2099-12-31"
+    "end_date": "2099-12-31",
+    "weight": 3
   },
   {
     "building_id": "",
@@ -21,9 +26,14 @@
     "website": "",
     "contact": "wisdomudoudo24@gmail.com",
     "logo": "",
-    "colors": { "bg": "#111317", "fg": "#f5e9d7", "accent": "#c9a227" },
+    "colors": {
+      "bg": "#111317",
+      "fg": "#f5e9d7",
+      "accent": "#c9a227"
+    },
     "start_date": "2026-01-01",
-    "end_date": "2099-12-31"
+    "end_date": "2099-12-31",
+    "weight": 1
   },
   {
     "building_id": "",
@@ -34,9 +44,14 @@
     "website": "",
     "contact": "wisdomudoudo24@gmail.com",
     "logo": "",
-    "colors": { "bg": "#f6d6e0", "fg": "#4a1d33", "accent": "#c2457a" },
+    "colors": {
+      "bg": "#f6d6e0",
+      "fg": "#4a1d33",
+      "accent": "#c2457a"
+    },
     "start_date": "2026-01-01",
-    "end_date": "2099-12-31"
+    "end_date": "2099-12-31",
+    "weight": 1
   },
   {
     "building_id": "",
@@ -47,8 +62,13 @@
     "website": "",
     "contact": "wisdomudoudo24@gmail.com",
     "logo": "",
-    "colors": { "bg": "#16a34a", "fg": "#ffffff", "accent": "#fde047" },
+    "colors": {
+      "bg": "#16a34a",
+      "fg": "#ffffff",
+      "accent": "#fde047"
+    },
     "start_date": "2026-01-01",
-    "end_date": "2099-12-31"
+    "end_date": "2099-12-31",
+    "weight": 1
   }
 ]
