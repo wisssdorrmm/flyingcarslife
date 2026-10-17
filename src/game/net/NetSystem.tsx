@@ -50,6 +50,9 @@ export function NetSystem() {
       z: pos.z,
       yaw: playerState.yaw,
       anim: playerState.anim,
+      emote: playerState.emote
+        ? { name: playerState.emote.name, t: playerState.emote.start }
+        : undefined,
     });
   });
   return null;

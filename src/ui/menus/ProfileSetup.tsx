@@ -22,8 +22,18 @@ export function ProfileSetup() {
 
   useEffect(() => {
     const saved = loadProfile();
+    const params = new URLSearchParams(window.location.search);
     if (saved) void startNet(saved);
-    else setNeeded(true);
+    else if (params.has('debug') && params.has('guest')) {
+      // Testing shortcut: join as a throwaway guest without the name screen.
+      const n = Math.floor(Math.random() * 9000 + 1000);
+      void startNet({
+        id: newProfileId(),
+        name: `Guest ${n}`,
+        title: TITLES[0],
+        color: NAME_COLORS[0]!,
+      });
+    } else setNeeded(true);
   }, []);
 
   if (!needed) return null;

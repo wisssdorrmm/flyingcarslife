@@ -4,14 +4,14 @@ import { useNet } from '../store/net';
 import { LocalTransport } from './localTransport';
 import { cleanText } from './moderation';
 import { SupabaseTransport } from './supabaseTransport';
-import type { ChatMessage, PlayerProfile, PlayerSnapshot, Transport, VoiceSignal } from './types';
+import type { ChatMessage, DirectMessage, PlayerProfile, PlayerSnapshot, Transport } from './types';
 
 /** Recent snapshots per remote player, newest last (outside React: updated ~10×/s each). */
 export const remoteSnapshots = new Map<string, PlayerSnapshot[]>();
 /** Latest chat line per player, for speech bubbles. */
 export const chatBubbles = new Map<string, { text: string; at: number }>();
-/** Voice signaling subscribers (the voice module registers here). */
-export const signalListeners = new Set<(s: VoiceSignal) => void>();
+/** Direct-message subscribers (voice and social modules register here). */
+export const directListeners = new Set<(m: DirectMessage) => void>();
 
 let transport: Transport | null = null;
 let lastChatAt = 0;
@@ -70,7 +70,8 @@ export async function startNet(saved: PlayerProfile): Promise<void> {
       const offset = performance.now() - s.t;
       const prev = clockOffset.get(s.id);
       clockOffset.set(s.id, prev === undefined ? offset : Math.min(prev, offset));
-      const local = { ...s, t: s.t + clockOffset.get(s.id)! };
+      const off = clockOffset.get(s.id)!;
+      const local = { ...s, t: s.t + off, emote: s.emote && { ...s.emote, t: s.emote.t + off } };
       const list = remoteSnapshots.get(s.id) ?? [];
       list.push(local);
       if (list.length > 20) list.shift();
@@ -82,7 +83,10 @@ export async function startNet(saved: PlayerProfile): Promise<void> {
       useNet.getState().addChat(clean);
       chatBubbles.set(m.from, { text: clean.text, at: performance.now() });
     },
-    onSignal: (s) => signalListeners.forEach((fn) => fn(s)),
+    onDirect: (m) => {
+      if (useNet.getState().blocked.has(m.from)) return;
+      directListeners.forEach((fn) => fn(m));
+    },
   });
 }
 
@@ -118,6 +122,8 @@ export function sendChat(text: string): string | null {
   return null;
 }
 
-export function sendSignal(s: VoiceSignal): void {
-  transport?.sendSignal(s);
+/** Sends a direct message to one player (from = this session). */
+export function sendDirect(m: Omit<DirectMessage, 'from'>): void {
+  const me = useNet.getState().profile;
+  if (me) transport?.sendDirect({ ...m, from: me.id });
 }

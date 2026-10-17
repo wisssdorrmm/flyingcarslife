@@ -5,7 +5,7 @@ type Packet =
   | { type: 'bye'; id: string }
   | { type: 'state'; payload: Parameters<Transport['sendState']>[0] }
   | { type: 'chat'; payload: Parameters<Transport['sendChat']>[0] }
-  | { type: 'signal'; payload: Parameters<Transport['sendSignal']>[0] };
+  | { type: 'direct'; payload: Parameters<Transport['sendDirect']>[0] };
 
 /**
  * Multiplayer between browser tabs on the same computer (BroadcastChannel). Used for testing
@@ -42,7 +42,7 @@ export class LocalTransport implements Transport {
         if (s) s.at = Date.now();
         h.onState(p.payload);
       } else if (p.type === 'chat') h.onChat(p.payload);
-      else if (p.type === 'signal' && p.payload.to === me.id) h.onSignal(p.payload);
+      else if (p.type === 'direct' && p.payload.to === me.id) h.onDirect(p.payload);
     };
     const hello = () => channel.postMessage({ type: 'hello', profile: me } satisfies Packet);
     hello();
@@ -72,8 +72,8 @@ export class LocalTransport implements Transport {
   sendChat(payload: Parameters<Transport['sendChat']>[0]): void {
     this.channel?.postMessage({ type: 'chat', payload } satisfies Packet);
   }
-  sendSignal(payload: Parameters<Transport['sendSignal']>[0]): void {
-    this.channel?.postMessage({ type: 'signal', payload } satisfies Packet);
+  sendDirect(payload: Parameters<Transport['sendDirect']>[0]): void {
+    this.channel?.postMessage({ type: 'direct', payload } satisfies Packet);
   }
 
   async disconnect(): Promise<void> {

@@ -132,6 +132,15 @@ export function TouchControls() {
       >
         Players
       </button>
+      <button
+        className="touch-btn emote-btn"
+        onPointerDown={(e) => {
+          e.stopPropagation();
+          window.dispatchEvent(new Event('fcl:emote-menu'));
+        }}
+      >
+        Emote
+      </button>
       <div className="touch-buttons">
         {mode === 'driving' ? (
           <>

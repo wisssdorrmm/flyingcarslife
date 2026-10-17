@@ -14,6 +14,7 @@ import { StatusHud, Toasts } from './ui/hud/StatusHud';
 import { PlacePanel } from './ui/menus/PlacePanel';
 import { ProfileSetup } from './ui/menus/ProfileSetup';
 import { ChatBox } from './ui/social/ChatBox';
+import { EmoteMenu } from './ui/social/EmoteMenu';
 import { PlayerList } from './ui/social/PlayerList';
 import { LoadingScreen } from './ui/menus/LoadingScreen';
 
@@ -44,6 +45,7 @@ export default function App() {
       <MapScreen />
       {!freecam && <ChatBox />}
       <PlayerList />
+      {!freecam && <EmoteMenu />}
       <ProfileSetup />
       <LoadingScreen />
       {showTouch && !freecam && <TouchControls />}

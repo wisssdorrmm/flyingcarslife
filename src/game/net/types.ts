@@ -20,6 +20,8 @@ export interface PlayerSnapshot {
   /** Facing (radians about Y; 0 = +z). */
   yaw: number;
   anim: AnimName;
+  /** Emote being performed (and when it started, sender clock ms). */
+  emote?: { name: EmoteName; t: number };
   /** Present while driving: the car's position, rotation and paint. */
   car?: {
     x: number;
@@ -41,19 +43,23 @@ export interface ChatMessage {
   t: number;
 }
 
-/** WebRTC signaling for proximity voice, addressed to one player. */
-export interface VoiceSignal {
+/** A message addressed to one player: voice signaling or a social request/response. */
+export interface DirectMessage {
   from: string;
   to: string;
-  kind: 'offer' | 'answer' | 'ice' | 'bye';
+  topic: 'voice' | 'social';
+  /** voice: offer | answer | ice | bye. social: e.g. high-five, hug, friend, accept, decline. */
+  kind: string;
   data?: unknown;
 }
+
+export type EmoteName = 'wave' | 'dance' | 'dance2' | 'highfive' | 'hug' | 'clap' | 'cheer';
 
 export interface TransportHandlers {
   onPresence: (players: PlayerProfile[]) => void;
   onState: (s: PlayerSnapshot) => void;
   onChat: (m: ChatMessage) => void;
-  onSignal: (s: VoiceSignal) => void;
+  onDirect: (m: DirectMessage) => void;
   onStatus: (status: 'connecting' | 'online' | 'offline', detail?: string) => void;
 }
 
@@ -63,6 +69,6 @@ export interface Transport {
   connect(room: string, me: PlayerProfile, handlers: TransportHandlers): Promise<void>;
   sendState(s: PlayerSnapshot): void;
   sendChat(m: ChatMessage): void;
-  sendSignal(s: VoiceSignal): void;
+  sendDirect(m: DirectMessage): void;
   disconnect(): Promise<void>;
 }

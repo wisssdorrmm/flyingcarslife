@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { CAMERA, PLAYER } from '../config';
+import type { EmoteName } from '../net/types';
 
 /**
  * Per-frame player/camera state shared between the controller, camera rig and (later) HUD.
@@ -22,7 +23,14 @@ export const playerState = {
   /** Visual facing (radians about Y, 0 = +z) and current animation, for multiplayer. */
   yaw: 0,
   anim: 'idle' as 'idle' | 'walk' | 'run' | 'sprint' | 'jump' | 'fall',
+  /** Emote in progress (start = performance.now() ms); cleared when it ends or you move. */
+  emote: null as { name: EmoteName; start: number } | null,
 };
+
+/** Starts an emote on the local player (others see it via the next network update). */
+export function playEmote(name: EmoteName): void {
+  playerState.emote = { name, start: performance.now() };
+}
 
 /** Camera-relative forward and right vectors on the ground plane for the current yaw. */
 export function cameraBasis(yaw: number): { forward: THREE.Vector2; right: THREE.Vector2 } {

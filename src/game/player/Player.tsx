@@ -25,7 +25,8 @@ import {
   CHARACTER_MODEL,
   type AnimState,
 } from './characterModel';
-import { cameraBasis, cameraState, playerState } from './playerState';
+import { applyEmote, emoteFinished } from './emotes';
+import { cameraBasis, cameraState, playEmote, playerState } from './playerState';
 
 const GRAVITY = PHYSICS.gravity[1];
 const CAPSULE_CENTER = PLAYER.capsuleHalfHeight + PLAYER.capsuleRadius;
@@ -205,6 +206,7 @@ export function Player() {
           life: useLife,
           nav: useNav,
           net: useNet,
+          playEmote,
         },
       });
     }
@@ -250,6 +252,17 @@ export function Player() {
     const natural = PLAYER_ANIMATIONS[state].natural;
     if (action && natural > 0) action.timeScale = THREE.MathUtils.clamp(flat / natural, 0.5, 1.8);
     anim.mixer.update(dt);
+
+    // Emotes layer on top of the animation; moving cancels them.
+    const emote = playerState.emote;
+    let bounce = 0;
+    if (emote) {
+      const t = (performance.now() - emote.start) / 1000;
+      if (emoteFinished(emote.name, t) || flat > 0.6 || airborne) playerState.emote = null;
+      else if (model.current)
+        bounce = applyEmote(character.mesh.skeleton, model.current, emote.name, t);
+    }
+    character.root.position.y = bounce;
 
     // Turn the model toward the direction of travel.
     const m = model.current;

@@ -11,6 +11,7 @@ import {
   cloneCharacter,
   type AnimState,
 } from '../player/characterModel';
+import { applyEmote, emoteFinished } from '../player/emotes';
 import { useNet } from '../store/net';
 import { buildStaticCar, CAR_MODEL_LOD } from '../vehicles/carModel';
 import { chatBubbles, remoteSnapshots } from './client';
@@ -63,7 +64,13 @@ function RemotePlayer({ profile }: { profile: PlayerProfile }) {
     actions.fall ??= actions.run;
     const holder = new THREE.Group();
     holder.add(root);
-    return { holder, mixer, actions, current: null as THREE.AnimationAction | null };
+    return {
+      holder,
+      mixer,
+      actions,
+      skeleton: mesh.skeleton,
+      current: null as THREE.AnimationAction | null,
+    };
   }, [charGltf, animGltf]);
 
   const tag = useMemo(() => makeNameTag(profile), [profile]);
@@ -130,6 +137,17 @@ function RemotePlayer({ profile }: { profile: PlayerProfile }) {
       if (action && natural > 0)
         action.timeScale = THREE.MathUtils.clamp(speed / natural, 0.5, 1.8);
       avatar.mixer.update(dt);
+      // Their emote, timed from when they started it (already on our clock).
+      const emote = b.emote;
+      const root = avatar.holder.children[0];
+      if (root) root.position.y = 0;
+      if (emote) {
+        const t = (performance.now() - emote.t) / 1000;
+        if (!emoteFinished(emote.name, t)) {
+          const bounce = applyEmote(avatar.skeleton, avatar.holder, emote.name, t);
+          if (root) root.position.y = bounce;
+        }
+      }
     }
 
     // Name tag and chat bubble, only within range.

@@ -52,8 +52,8 @@ export class SupabaseTransport implements Transport {
       })
       .on('broadcast', { event: 'state' }, ({ payload }) => h.onState(payload))
       .on('broadcast', { event: 'chat' }, ({ payload }) => h.onChat(payload))
-      .on('broadcast', { event: 'signal' }, ({ payload }) => {
-        if (payload.to === me.id) h.onSignal(payload);
+      .on('broadcast', { event: 'direct' }, ({ payload }) => {
+        if (payload.to === me.id) h.onDirect(payload);
       });
     await new Promise<void>((resolve, reject) => {
       room.subscribe(async (status) => {
@@ -76,8 +76,8 @@ export class SupabaseTransport implements Transport {
   sendChat(payload: Parameters<Transport['sendChat']>[0]): void {
     void this.room?.send({ type: 'broadcast', event: 'chat', payload });
   }
-  sendSignal(payload: Parameters<Transport['sendSignal']>[0]): void {
-    void this.room?.send({ type: 'broadcast', event: 'signal', payload });
+  sendDirect(payload: Parameters<Transport['sendDirect']>[0]): void {
+    void this.room?.send({ type: 'broadcast', event: 'direct', payload });
   }
 
   async disconnect(): Promise<void> {

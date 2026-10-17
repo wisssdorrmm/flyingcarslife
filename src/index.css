@@ -1149,3 +1149,51 @@ kbd {
     width: min(240px, calc(100vw - 190px));
   }
 }
+
+.emote-menu {
+  position: absolute;
+  left: 50%;
+  bottom: max(110px, 18%);
+  transform: translateX(-50%);
+  display: grid;
+  grid-template-columns: repeat(4, minmax(72px, 1fr));
+  gap: 8px;
+  padding: 12px;
+  border-radius: 16px;
+  background: rgb(10 14 20 / 0.8);
+}
+
+.emote-menu button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-height: 72px;
+  padding: 8px 6px;
+  border: 1px solid rgb(255 255 255 / 0.12);
+  border-radius: 12px;
+  background: rgb(255 255 255 / 0.04);
+  color: inherit;
+  font:
+    600 12px system-ui,
+    sans-serif;
+}
+
+.emote-menu .emote-icon {
+  font-size: 24px;
+}
+
+.emote-menu kbd {
+  margin: 2px 0 0;
+  font-size: 10px;
+  opacity: 0.6;
+}
+
+.emote-btn {
+  position: absolute;
+  right: max(16px, env(safe-area-inset-right));
+  top: calc(max(12px, env(safe-area-inset-top)) + 410px);
+  width: 52px;
+  height: 52px;
+  font-size: 10px;
+}
