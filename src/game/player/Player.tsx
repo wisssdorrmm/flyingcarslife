@@ -236,6 +236,7 @@ export function Player() {
     else if (flat < (PLAYER.runSpeed + PLAYER.sprintSpeed) / 2) state = 'run';
     else state = 'sprint';
 
+    playerState.anim = state;
     const action = anim.actions[state] ?? anim.actions.idle;
     if (action && action !== anim.current) {
       action.reset().fadeIn(FADE).play();
@@ -255,6 +256,7 @@ export function Player() {
       const d = angleDelta(m.rotation.y, target);
       m.rotation.y += THREE.MathUtils.clamp(d, -step, step);
     }
+    if (m) playerState.yaw = m.rotation.y;
   });
 
   return (

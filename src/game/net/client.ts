@@ -18,9 +18,27 @@ let lastChatAt = 0;
 /** Offset between each sender's clock and ours, estimated from arrivals. */
 const clockOffset = new Map<string, number>();
 
+/**
+ * Each tab is its own session, so two tabs with the same saved profile are two players (handy for
+ * testing, and the same account on two devices doesn't collide).
+ */
+function sessionId(profileId: string): string {
+  try {
+    let tab = sessionStorage.getItem('fcl.tab');
+    if (!tab) {
+      tab = Math.random().toString(36).slice(2, 8);
+      sessionStorage.setItem('fcl.tab', tab);
+    }
+    return `${profileId}:${tab}`;
+  } catch {
+    return `${profileId}:${Math.random().toString(36).slice(2, 8)}`;
+  }
+}
+
 /** Connects to a room: Supabase Realtime when configured, otherwise other tabs on this computer. */
-export async function startNet(profile: PlayerProfile): Promise<void> {
+export async function startNet(saved: PlayerProfile): Promise<void> {
   if (transport) return;
+  const profile = { ...saved, id: sessionId(saved.id) };
   const net = useNet.getState();
   net.setProfile(profile);
   let room = 'local-1';

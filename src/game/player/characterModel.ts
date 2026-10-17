@@ -121,3 +121,36 @@ export function buildCharacter(
   facing.add(root);
   return { root: facing, mesh, clips };
 }
+
+const templates = new WeakMap<THREE.Object3D, Character>();
+
+/**
+ * One shared, fully retargeted character per loaded model. Other players are cheap clones of it
+ * (retargeting the clips is the expensive part and only happens once).
+ */
+export function characterTemplate(
+  characterScene: THREE.Object3D,
+  animationScene: THREE.Object3D,
+  animationClips: THREE.AnimationClip[],
+  ownClips: THREE.AnimationClip[],
+): Character {
+  let t = templates.get(characterScene);
+  if (!t) {
+    t = buildCharacter(characterScene, animationScene, animationClips, ownClips);
+    templates.set(characterScene, t);
+  }
+  return t;
+}
+
+/** A new instance of a template that can animate independently (shares geometry and clips). */
+export function cloneCharacter(t: Character): { root: THREE.Object3D; mesh: THREE.SkinnedMesh } {
+  const root = SkeletonUtils.clone(t.root);
+  const mesh = findSkinnedMesh(root);
+  root.traverse((o) => {
+    if ((o as THREE.Mesh).isMesh) {
+      o.castShadow = true;
+      o.frustumCulled = false;
+    }
+  });
+  return { root, mesh };
+}

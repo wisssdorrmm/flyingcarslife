@@ -247,7 +247,13 @@ export function DrivableCar({ id, position, heading, paint }: Props) {
             s.doorTimer = 0.9;
           }
           game.enterVehicle(id);
-          vehicleState.active = { id, object: root, bodyHandle: rb.handle, speed: 0 };
+          vehicleState.active = {
+            id,
+            object: root,
+            bodyHandle: rb.handle,
+            speed: 0,
+            paint: String(paint),
+          };
         }
       } else if (s.ownsPrompt) {
         game.setPrompt(null);

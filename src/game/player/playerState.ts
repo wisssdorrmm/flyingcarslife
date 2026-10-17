@@ -19,6 +19,9 @@ export const playerState = {
   grounded: true,
   /** Set to move the player instantly (e.g. stepping out of a car); consumed by <Player>. */
   teleport: null as THREE.Vector3 | null,
+  /** Visual facing (radians about Y, 0 = +z) and current animation, for multiplayer. */
+  yaw: 0,
+  anim: 'idle' as 'idle' | 'walk' | 'run' | 'sprint' | 'jump' | 'fall',
 };
 
 /** Camera-relative forward and right vectors on the ground plane for the current yaw. */

@@ -4,6 +4,8 @@ import { Stats } from '@react-three/drei';
 import { Physics, RigidBody, useRapier, type RapierRigidBody } from '@react-three/rapier';
 import * as THREE from 'three';
 import { PHYSICS, WORLD_LIGHTING } from './config';
+import { NetSystem } from './net/NetSystem';
+import { RemotePlayers } from './net/RemotePlayers';
 import { PlaceInteractions } from './places/PlaceInteractions';
 import { PlaceSigns } from './places/PlaceSigns';
 import { Player } from './player/Player';
@@ -63,6 +65,7 @@ export default function Game() {
       />
       {freecam ? <DebugCamera /> : <DesktopInput />}
       <LifeSystem />
+      {!freecam && <NetSystem />}
       {!freecam && <PlaceInteractions />}
 
       <Suspense fallback={null}>
@@ -82,6 +85,7 @@ export default function Game() {
           <StreetSigns />
           <PlaceSigns />
           <GpsRoute />
+          <RemotePlayers />
           <Props />
           <ParkedCars />
           <DrivableCar {...PLAYER_CAR} />

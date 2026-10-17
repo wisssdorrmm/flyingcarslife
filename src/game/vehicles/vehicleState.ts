@@ -10,5 +10,7 @@ export const vehicleState = {
     bodyHandle: number;
     /** Forward speed in m/s (negative when reversing). */
     speed: number;
+    /** Body color, so other players see the same car. */
+    paint: string;
   },
 };

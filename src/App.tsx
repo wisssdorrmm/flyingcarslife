@@ -12,6 +12,7 @@ import { Prompt } from './ui/hud/Prompt';
 import { Speedometer } from './ui/hud/Speedometer';
 import { StatusHud, Toasts } from './ui/hud/StatusHud';
 import { PlacePanel } from './ui/menus/PlacePanel';
+import { ProfileSetup } from './ui/menus/ProfileSetup';
 import { LoadingScreen } from './ui/menus/LoadingScreen';
 
 // The 3D engine is split out so the shell paints instantly while three/rapier download.
@@ -39,6 +40,7 @@ export default function App() {
       <Speedometer />
       <PlacePanel />
       <MapScreen />
+      <ProfileSetup />
       <LoadingScreen />
       {showTouch && !freecam && <TouchControls />}
       <ControlsHelp freecam={freecam} />
