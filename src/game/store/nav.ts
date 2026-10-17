@@ -1,6 +1,5 @@
 import * as THREE from 'three';
 import { create } from 'zustand';
-import { cameraState, playerState } from '../player/playerState';
 import { vehicleState } from '../vehicles/vehicleState';
 
 export interface Waypoint {
@@ -39,18 +38,13 @@ const tmpPos = new THREE.Vector3();
 const tmpQuat = new THREE.Quaternion();
 const tmpFwd = new THREE.Vector3();
 
-/** Where the player is and which way they face (ground-plane unit vector), on foot or driving. */
+/** Where the player's car is and which way it faces (ground-plane unit vector). */
 export function currentPose(): { x: number; z: number; fx: number; fz: number } | null {
   const car = vehicleState.active?.object;
-  const obj = car ?? playerState.object;
-  if (!obj) return null;
-  obj.getWorldPosition(tmpPos);
-  if (car) {
-    car.getWorldQuaternion(tmpQuat);
-    tmpFwd.set(0, 0, 1).applyQuaternion(tmpQuat);
-  } else {
-    tmpFwd.set(-Math.sin(cameraState.yaw), 0, -Math.cos(cameraState.yaw));
-  }
+  if (!car) return null;
+  car.getWorldPosition(tmpPos);
+  car.getWorldQuaternion(tmpQuat);
+  tmpFwd.set(0, 0, 1).applyQuaternion(tmpQuat);
   const len = Math.hypot(tmpFwd.x, tmpFwd.z) || 1;
   return { x: tmpPos.x, z: tmpPos.z, fx: tmpFwd.x / len, fz: tmpFwd.z / len };
 }

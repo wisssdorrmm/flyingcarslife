@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { useRapier } from '@react-three/rapier';
-import { playerState } from '../player/playerState';
 import { vehicleState } from '../vehicles/vehicleState';
 import {
   COLLIDER_CHUNK,
@@ -213,7 +212,7 @@ export function WorldColliders() {
   useFrame(({ camera, clock }) => {
     if (clock.elapsedTime - last.current < 0.25) return;
     last.current = clock.elapsedTime;
-    const obj = vehicleState.active?.object ?? playerState.object;
+    const obj = vehicleState.active?.object;
     if (obj) obj.getWorldPosition(focus);
     else focus.copy(camera.position);
     streamCollidersAround(focus.x, focus.z);

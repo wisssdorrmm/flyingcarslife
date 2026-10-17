@@ -4,19 +4,11 @@ import { QUALITY_TIERS } from './game/quality';
 import { useSettings } from './game/store/settings';
 import { detectDevice } from './game/quality';
 import { TouchControls } from './ui/controls/TouchControls';
-import { ControlsHelp } from './ui/hud/ControlsHelp';
 import { LocationLabel } from './ui/hud/LocationLabel';
 import { Minimap } from './ui/hud/Minimap';
 import { MapScreen } from './ui/map/MapScreen';
-import { Prompt } from './ui/hud/Prompt';
 import { Speedometer } from './ui/hud/Speedometer';
-import { StatusHud, Toasts } from './ui/hud/StatusHud';
-import { PlacePanel } from './ui/menus/PlacePanel';
-import { ProfileSetup } from './ui/menus/ProfileSetup';
-import { ChatBox } from './ui/social/ChatBox';
-import { EmoteMenu } from './ui/social/EmoteMenu';
-import { SocialUi } from './ui/social/InteractPanel';
-import { PlayerList } from './ui/social/PlayerList';
+import { Toasts } from './ui/hud/Toasts';
 import { LoadingScreen } from './ui/menus/LoadingScreen';
 
 // The 3D engine is split out so the shell paints instantly while three/rapier download.
@@ -36,22 +28,13 @@ export default function App() {
       <Suspense fallback={null}>
         <Game />
       </Suspense>
-      <StatusHud />
       <LocationLabel />
       {!freecam && <Minimap />}
       <Toasts />
-      <Prompt />
       <Speedometer />
-      <PlacePanel />
       <MapScreen />
-      {!freecam && <ChatBox />}
-      <PlayerList />
-      {!freecam && <EmoteMenu />}
-      {!freecam && <SocialUi />}
-      <ProfileSetup />
       <LoadingScreen />
       {showTouch && !freecam && <TouchControls />}
-      <ControlsHelp freecam={freecam} />
       {debug && <DebugPanel />}
     </div>
   );

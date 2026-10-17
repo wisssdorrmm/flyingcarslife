@@ -6,7 +6,7 @@ import tseslint from 'typescript-eslint';
 import prettier from 'eslint-config-prettier';
 
 export default tseslint.config(
-  { ignores: ['dist', 'node_modules', 'public', 'assets-src', 'supabase/functions'] },
+  { ignores: ['dist', 'node_modules', 'public', 'assets-src', 'supabase/functions', 'src/_parked'] },
   {
     files: ['**/*.{ts,tsx}'],
     extends: [js.configs.recommended, ...tseslint.configs.recommended, prettier],

@@ -4,17 +4,8 @@ import { Stats } from '@react-three/drei';
 import { Physics, RigidBody, useRapier, type RapierRigidBody } from '@react-three/rapier';
 import * as THREE from 'three';
 import { PHYSICS, WORLD_LIGHTING } from './config';
-import { DemoPlayers } from './net/DemoPlayers';
-import { NetSystem } from './net/NetSystem';
-import { RemotePlayers } from './net/RemotePlayers';
-import { SocialSystem } from './net/SocialSystem';
-import { PlaceInteractions } from './places/PlaceInteractions';
-import { PlaceSigns } from './places/PlaceSigns';
-import { Player } from './player/Player';
-import { ThirdPersonCamera } from './player/ThirdPersonCamera';
 import { useSettings } from './store/settings';
 import { DesktopInput } from './systems/DesktopInput';
-import { LifeSystem } from './systems/LifeSystem';
 import { ChaseCamera } from './vehicles/ChaseCamera';
 import { DrivableCar } from './vehicles/DrivableCar';
 import { ParkedCars } from './vehicles/ParkedCars';
@@ -35,7 +26,7 @@ const params = new URLSearchParams(window.location.search);
 const showColliders = params.has('colliders');
 /** `?debug&pausephysics` freezes the physics world (for profiling). */
 const pausePhysics = params.has('pausephysics');
-/** `?debug&freecam` swaps the player for the free-fly review camera. */
+/** `?debug&freecam` swaps the chase camera for the free-fly review camera. */
 const freecamRequested = params.has('freecam');
 
 /** Canvas, physics world and scene root. */
@@ -63,11 +54,6 @@ export default function Game() {
     >
       <fogExp2 attach="fog" args={[WORLD_LIGHTING.fogColor, WORLD_LIGHTING.fogDensity]} />
       {freecam ? <DebugCamera /> : <DesktopInput />}
-      <LifeSystem />
-      {!freecam && <NetSystem />}
-      {!freecam && <SocialSystem />}
-      {!freecam && <DemoPlayers />}
-      {!freecam && <PlaceInteractions />}
 
       <Suspense fallback={null}>
         {/* updatePriority < 0: physics steps before default-priority frame callbacks (camera). */}
@@ -84,15 +70,11 @@ export default function Game() {
           <Buildings />
           <Fixtures />
           <StreetSigns />
-          <PlaceSigns />
           <GpsRoute />
-          <RemotePlayers />
           <Props />
           <ParkedCars />
           <DrivableCar {...PLAYER_CAR} />
           <WorldColliders />
-          {!freecam && <Player />}
-          {!freecam && <ThirdPersonCamera />}
           {!freecam && <ChaseCamera />}
           {debug && <PhysicsProbe />}
           {debug && <PhysicsDebugHook />}

@@ -13,10 +13,9 @@ import * as THREE from 'three';
 import { modelUrl } from '../../lib/assets';
 import { stopEvSound, updateEvSound } from '../audio/evSound';
 import { HUD_UNITS, PHYSICS, VEHICLE } from '../config';
-import { cameraState, playerState } from '../player/playerState';
 import { useGame } from '../store/game';
 import { useNav } from '../store/nav';
-import { consumePress, input, readMove } from '../systems/input';
+import { input, readMove } from '../systems/input';
 import { buildDrivableCar, CAR_MODEL, type CarLook } from './carModel';
 import { vehicleState } from './vehicleState';
 
@@ -27,12 +26,6 @@ interface Props extends CarLook {
   heading: number;
 }
 
-/** Door points in the car's frame, by the front seats (+x = driver/left side). */
-const DRIVER_DOOR = new THREE.Vector3(1.25, 0, 0.35);
-const PASSENGER_DOOR = new THREE.Vector3(-1.25, 0, 0.35);
-/** Body footprint in the car's frame, for "close enough to get in" checks. */
-const BODY_HALF = { x: 0.95, z: 2.2 };
-const BODY_CENTER_Z = 0.24;
 const HUD_INTERVAL = 0.1;
 /**
  * Rapier scales suspension force by chassis mass, so each wheel compresses by g / (4·stiffness) at
@@ -61,9 +54,6 @@ export function DrivableCar({ id, position, heading, paint }: Props) {
     doorTarget: 0,
     doorTimer: 0,
     hudTimer: 0,
-    ownsPrompt: false,
-    /** Which side the player got in on (+1 driver, −1 passenger); they get out the same side. */
-    entrySide: 1,
   });
 
   useEffect(() => {
@@ -97,18 +87,13 @@ export function DrivableCar({ id, position, heading, paint }: Props) {
     };
   }, [world, rig]);
 
-  const isDriving = () => {
-    const g = useGame.getState();
-    return g.mode === 'driving' && g.vehicleId === id;
-  };
-
   useBeforePhysicsStep(() => {
     const vc = vehicle.current;
     const rb = chassis.current;
     if (!vc || !rb) return;
     const dt = PHYSICS.timeStep;
     const s = sim.current;
-    const driving = isDriving();
+    const driving = true;
 
     let throttleIn = 0;
     let steerIn = 0;
@@ -188,16 +173,18 @@ export function DrivableCar({ id, position, heading, paint }: Props) {
     }
   };
 
-  const tmp = useMemo(
-    () => ({
-      door: new THREE.Vector3(),
-      player: new THREE.Vector3(),
-      local: new THREE.Vector3(),
-      inverse: new THREE.Matrix4(),
-      q: new THREE.Quaternion(),
-    }),
-    [],
-  );
+  // This car is the player: register it as the active vehicle as soon as its body exists.
+  useEffect(() => {
+    const rb = chassis.current;
+    const root = visual.current;
+    if (!rb || !root) return;
+    vehicleState.active = { id, object: root, bodyHandle: rb.handle, speed: 0, paint: String(paint) };
+    useGame.getState().enterVehicle(id);
+    return () => {
+      if (vehicleState.active?.id === id) vehicleState.active = null;
+      stopEvSound();
+    };
+  }, [id, paint]);
 
   useFrame((_, dt) => {
     const vc = vehicle.current;
@@ -206,7 +193,6 @@ export function DrivableCar({ id, position, heading, paint }: Props) {
     if (!vc || !rb || !root) return;
     const s = sim.current;
     const game = useGame.getState();
-    const driving = isDriving();
 
     // Wheels: suspension travel, steering and spin.
     rig.wheels.forEach((w, i) => {
@@ -216,103 +202,21 @@ export function DrivableCar({ id, position, heading, paint }: Props) {
       w.spin.rotation.x = vc.wheelRotation(i) ?? 0;
     });
 
-    // Door swings open on enter/exit, then closes.
-    if (s.doorTimer > 0) {
-      s.doorTimer -= dt;
-      if (s.doorTimer <= 0) s.doorTarget = 0;
-    }
-    s.doorOpen = THREE.MathUtils.damp(s.doorOpen, s.doorTarget, 8, dt);
-    if (rig.driverDoor) rig.driverDoor.rotation.y = s.doorOpen * 1.1;
+    const speed = vc.currentVehicleSpeed();
+    if (vehicleState.active) vehicleState.active.speed = speed;
+    updateEvSound(speed, s.throttle);
 
-    root.updateWorldMatrix(true, false);
-
-    if (game.mode === 'onFoot' && playerState.object) {
-      // Distance from the player to the car's footprint, so you can get in from either side.
-      playerState.object.getWorldPosition(tmp.player);
-      tmp.local.copy(tmp.player).applyMatrix4(tmp.inverse.copy(root.matrixWorld).invert());
-      const dx = Math.max(Math.abs(tmp.local.x) - BODY_HALF.x, 0);
-      const dz = Math.max(Math.abs(tmp.local.z - BODY_CENTER_Z) - BODY_HALF.z, 0);
-      const near = Math.hypot(dx, dz) < VEHICLE.enterDistance && Math.abs(tmp.local.y) < 2;
-      if (near) {
-        if (!s.ownsPrompt) {
-          game.setPrompt('drive');
-          s.ownsPrompt = true;
-        }
-        if (consumePress('interact')) {
-          s.ownsPrompt = false;
-          s.entrySide = tmp.local.x >= 0 ? 1 : -1;
-          // Only the driver door is rigged to open.
-          if (s.entrySide > 0) {
-            s.doorTarget = 1;
-            s.doorTimer = 0.9;
-          }
-          game.enterVehicle(id);
-          vehicleState.active = {
-            id,
-            object: root,
-            bodyHandle: rb.handle,
-            speed: 0,
-            paint: String(paint),
-          };
-        }
-      } else if (s.ownsPrompt) {
-        game.setPrompt(null);
-        s.ownsPrompt = false;
-      }
-    }
-
-    if (driving) {
-      const speed = vc.currentVehicleSpeed();
-      if (vehicleState.active) vehicleState.active.speed = speed;
-      updateEvSound(speed, s.throttle);
-
-      // Get out when nearly stopped.
-      if (consumePress('interact') && Math.abs(speed) < 3) {
-        // Step out on the side the player got in.
-        tmp.door
-          .copy(s.entrySide > 0 ? DRIVER_DOOR : PASSENGER_DOOR)
-          .applyMatrix4(root.matrixWorld);
-        const out = tmp.door
-          .clone()
-          .add(
-            new THREE.Vector3(0.5 * s.entrySide, 0, 0).applyQuaternion(
-              root.getWorldQuaternion(tmp.q),
-            ),
-          );
-        out.y = Math.max(out.y, 0.2);
-        playerState.teleport = out;
-        // Keep the on-foot camera looking the way the car faces.
-        const fwd = new THREE.Vector3(0, 0, 1).applyQuaternion(tmp.q);
-        cameraState.yaw = Math.atan2(-fwd.x, -fwd.z);
-        if (s.entrySide > 0) {
-          s.doorTarget = 1;
-          s.doorTimer = 0.9;
-        }
-        stopEvSound();
-        vehicleState.active = null;
-        game.exitVehicle();
-        return;
-      }
-
-      s.hudTimer -= dt;
-      if (s.hudTimer <= 0) {
-        s.hudTimer = HUD_INTERVAL;
-        game.setVehicleHud({
-          speed: Math.round(Math.abs(speed) * MS_TO_UNITS),
-          battery: Math.round(s.battery),
-          damage: Math.round(s.damage),
-          reversing: speed < -0.3,
-        });
-      }
+    s.hudTimer -= dt;
+    if (s.hudTimer <= 0) {
+      s.hudTimer = HUD_INTERVAL;
+      game.setVehicleHud({
+        speed: Math.round(Math.abs(speed) * MS_TO_UNITS),
+        battery: Math.round(s.battery),
+        damage: Math.round(s.damage),
+        reversing: speed < -0.3,
+      });
     }
   });
-
-  useEffect(
-    () => () => {
-      if (vehicleState.active?.id === id) vehicleState.active = null;
-    },
-    [id],
-  );
 
   return (
     <RigidBody

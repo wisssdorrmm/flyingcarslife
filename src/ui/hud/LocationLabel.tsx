@@ -1,10 +1,7 @@
 import { useEffect, useState } from 'react';
-import * as THREE from 'three';
-import { playerState } from '../../game/player/playerState';
-import { vehicleState } from '../../game/vehicles/vehicleState';
+import { currentPose } from '../../game/store/nav';
 import { locate } from '../../game/world/cityPlan';
 
-const tmp = new THREE.Vector3();
 
 /** Shows the street you're on (and the cross street at intersections), updated twice a second. */
 export function LocationLabel() {
@@ -12,10 +9,9 @@ export function LocationLabel() {
 
   useEffect(() => {
     const id = window.setInterval(() => {
-      const obj = vehicleState.active?.object ?? playerState.object;
-      if (!obj) return;
-      obj.getWorldPosition(tmp);
-      const { road, cross } = locate(tmp.x, tmp.z);
+      const pose = currentPose();
+      if (!pose) return;
+      const { road, cross } = locate(pose.x, pose.z);
       const next = road ? (cross ? `${road.name} & ${cross.name}` : road.name) : null;
       setLabel((prev) => (prev === next ? prev : next));
     }, 500);

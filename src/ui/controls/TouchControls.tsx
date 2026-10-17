@@ -1,9 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { INPUT } from '../../game/config';
-import { useGame } from '../../game/store/game';
 import { useNav } from '../../game/store/nav';
-import { useNet } from '../../game/store/net';
-import { useSocial } from '../../game/store/social';
 import { addLook, input, pressAction, releaseAction } from '../../game/systems/input';
 
 const JOYSTICK_RADIUS = 56;
@@ -22,10 +19,6 @@ interface Stick {
  */
 export function TouchControls() {
   const [stick, setStick] = useState<Stick | null>(null);
-  const [sprint, setSprint] = useState(false);
-  const mode = useGame((s) => s.mode);
-  const prompt = useGame((s) => s.prompt);
-  const socialTarget = useSocial((s) => s.target);
   const lookId = useRef<number | null>(null);
   const lookLast = useRef({ x: 0, y: 0 });
   const stickRef = useRef<Stick | null>(null);
@@ -33,7 +26,6 @@ export function TouchControls() {
   useEffect(
     () => () => {
       input.touchMove.active = false;
-      input.sprintToggle = false;
     },
     [],
   );
@@ -88,7 +80,7 @@ export function TouchControls() {
     if (e.pointerId === lookId.current) lookId.current = null;
   };
 
-  const hold = (action: 'jump' | 'interact') => ({
+  const hold = (action: 'jump') => ({
     onPointerDown: (e: React.PointerEvent) => {
       e.stopPropagation();
       pressAction(action);
@@ -125,73 +117,10 @@ export function TouchControls() {
       >
         Map
       </button>
-      <button
-        className="touch-btn players-btn"
-        onPointerDown={(e) => {
-          e.stopPropagation();
-          useNet.getState().setListOpen(true);
-        }}
-      >
-        Players
-      </button>
-      <button
-        className="touch-btn emote-btn"
-        onPointerDown={(e) => {
-          e.stopPropagation();
-          window.dispatchEvent(new Event('fcl:emote-menu'));
-        }}
-      >
-        Emote
-      </button>
       <div className="touch-buttons">
-        {mode === 'driving' ? (
-          <>
-            <button className="touch-btn" {...hold('interact')}>
-              Exit
-            </button>
-            <button className="touch-btn primary" {...hold('jump')}>
-              Brake
-            </button>
-          </>
-        ) : (
-          <>
-            {prompt === 'drive' && (
-              <button className="touch-btn accent" {...hold('interact')}>
-                Drive
-              </button>
-            )}
-            {socialTarget && !prompt && (
-              <button
-                className="touch-btn accent"
-                onPointerDown={(e) => {
-                  e.stopPropagation();
-                  useSocial.getState().setPanelOpen(true);
-                }}
-              >
-                Meet
-              </button>
-            )}
-            {prompt?.startsWith('place:') && (
-              <button className="touch-btn accent" {...hold('interact')}>
-                Enter
-              </button>
-            )}
-            <button
-              className={`touch-btn${sprint ? ' active' : ''}`}
-              aria-pressed={sprint}
-              onPointerDown={(e) => {
-                e.stopPropagation();
-                input.sprintToggle = !input.sprintToggle;
-                setSprint(input.sprintToggle);
-              }}
-            >
-              Sprint
-            </button>
-            <button className="touch-btn primary" {...hold('jump')}>
-              Jump
-            </button>
-          </>
-        )}
+        <button className="touch-btn primary" {...hold('jump')}>
+          Drift
+        </button>
       </div>
     </div>
   );

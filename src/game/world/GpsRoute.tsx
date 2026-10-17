@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import { useLife } from '../store/life';
+import { toast } from '../store/toasts';
 import { currentPose, useNav } from '../store/nav';
 import { findRoute, routeLength } from './navGraph';
 
@@ -106,7 +106,7 @@ export function GpsRoute() {
     const pose = currentPose();
     if (!pose) return;
     if (Math.hypot(pose.x - wp.x, pose.z - wp.z) < ARRIVE_METERS) {
-      useLife.getState().toast(`You've arrived: ${wp.label}`);
+      toast(`You've arrived: ${wp.label}`);
       nav.setWaypoint(null);
       return;
     }
