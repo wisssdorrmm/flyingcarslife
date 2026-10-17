@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect } from 'react';
 import { startAutosave } from './lib/save';
+import { runTestScene, TEST_SCENE_NAMES, type TestScene } from './game/debug/testScenes';
 import { QUALITY_TIERS } from './game/quality';
 import { useSettings } from './game/store/settings';
 import { detectDevice } from './game/quality';
@@ -50,6 +51,12 @@ function DebugPanel() {
         </button>
       ))}
       <button onClick={resetQualityToAuto}>auto</button>
+      <span>Teleport</span>
+      {(Object.keys(TEST_SCENE_NAMES) as TestScene[]).map((s) => (
+        <button key={s} onClick={() => void runTestScene(s)}>
+          {TEST_SCENE_NAMES[s]}
+        </button>
+      ))}
     </div>
   );
 }

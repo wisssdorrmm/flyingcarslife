@@ -176,6 +176,8 @@ export const WORLD_LIGHTING = {
 export const CITY_STREAMING = {
   /** Tiles whose square is within this distance (m) of the car are drawn. */
   viewRadius: { low: 330, medium: 450, high: 600, ultra: 750 },
+  /** Extra view radius while flying (you can see much further from the air). */
+  flyingBonus: 300,
   /** Loaded tiles are dropped once this much further than the view radius. */
   unloadMargin: 150,
   /** Tiles this close get trimesh colliders. */
@@ -388,6 +390,68 @@ export const PEDESTRIANS = {
   downSeconds: 4,
   /** Full animation updates within this range; further ones update less often. */
   animRange: 55,
+  /** A rocket launch this close makes people stop, look up and point (some film it). */
+  lookRadius: 40,
+  lookSeconds: 7,
+  phoneShare: 0.35,
+} as const;
+
+/**
+ * Rocket launch and flight (vehicles/flight.ts, CLAUDE.md §6.2) — the `flying` tuning block.
+ * Speeds in m/s, times in s, angles in degrees, battery in % per second.
+ */
+export const FLYING = {
+  noseUpDeg: 82,
+  noseUpTime: 0.4,
+  keepForwardVel: 0.4,
+  climbAccel: 30,
+  climbMaxSpeed: 60,
+  tumbleTime: 2.0,
+  tumbleRotations: 1.5,
+  stabilizeTime: 0.6,
+  flightMaxSpeed: 70,
+  maxAltitude: 400,
+  autoLandHeight: 6,
+  batteryDrainPerSec: 0.8,
+  // Derived feel (not in the spec list):
+  /** Battery % a launch costs. */
+  launchCost: 4,
+  flightAccel: 16,
+  reverseSpeed: 10,
+  /** Climb / descend speed, and the gentle climb right after stabilizing. */
+  climbSpeed: 16,
+  gentleClimb: 3,
+  /** Turn rate (rad/s) and the automatic bank / climb pitch (rad). */
+  yawRate: 1.3,
+  bankAngle: 0.5,
+  pitchAngle: 0.18,
+  /** Empty battery: forward speed and sink rate while gliding down. */
+  glideSpeed: 14,
+  glideSink: 3.5,
+  /** Camera: distance/height in flight, and during the launch (further back, looking up). */
+  cameraDistance: 11,
+  cameraHeight: 3.4,
+  launchCameraDistance: 17,
+} as const;
+
+/** Debug test scenes for the rocket launch (src/game/debug, `?debug` panel). Local meters. */
+export const TEST_SCENES = {
+  /** Multi-level rooftop car park, built on the surface lot at Fisherman's Wharf. */
+  carPark: {
+    /** Center of the footprint and its size (x across, z along the ramps). */
+    x: -223,
+    z: -377,
+    width: 40,
+    length: 60,
+    levels: 3,
+    levelHeight: 3.4,
+    /** Strip on the +x side where the ramps climb (m). */
+    rampWidth: 9,
+  },
+  /** "Bridge launch": The Embarcadero heading south toward the Ferry Building and downtown towers. */
+  bridge: { street: 'The Embarcadero', near: [1450, 520] as [number, number] },
+  /** The police car starts this far behind the player. */
+  policeBehind: 22,
 } as const;
 
 export const CHASE_CAMERA = {

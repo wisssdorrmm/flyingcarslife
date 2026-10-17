@@ -5,7 +5,12 @@ import type { RigidBody } from '@dimforge/rapier3d-compat';
 import * as THREE from 'three';
 import { TRAFFIC } from '../config';
 import type { City } from '../city/cityData';
-import { busGeometries, parkedCarGeometries, PARKED_PAINTS } from '../city/propModels';
+import {
+  busGeometries,
+  parkedCarGeometries,
+  PARKED_PAINTS,
+  policeCarGeometries,
+} from '../city/propModels';
 import { useSettings } from '../store/settings';
 import { useUi } from '../store/ui';
 import { carContactHooks } from '../vehicles/contacts';
@@ -33,6 +38,7 @@ export function Traffic({ city }: { city: City }) {
   const meshes = useMemo(() => {
     const car = parkedCarGeometries();
     const bus = busGeometries();
+    const cop = policeCarGeometries();
     const mk = (geo: THREE.BufferGeometry, mat: THREE.Material, cap: number) => {
       const m = new THREE.InstancedMesh(geo, mat, cap);
       m.count = 0;
@@ -58,6 +64,23 @@ export function Traffic({ city }: { city: City }) {
       ),
       busGlass: mk(bus.glass, glass, 16),
       busWheels: mk(bus.wheels, tire, 16),
+      copBody: mk(
+        cop.body,
+        new THREE.MeshStandardMaterial({ color: '#15171b', roughness: 0.35, metalness: 0.3 }),
+        8,
+      ),
+      copDoors: mk(
+        cop.doors,
+        new THREE.MeshStandardMaterial({ color: '#f4f4f2', roughness: 0.4 }),
+        8,
+      ),
+      copGlass: mk(cop.glass, glass, 8),
+      copWheels: mk(cop.wheels, tire, 8),
+      copBar: mk(
+        cop.lightbar,
+        new THREE.MeshStandardMaterial({ color: '#2a2c30', roughness: 0.5 }),
+        8,
+      ),
     };
   }, []);
 
@@ -178,7 +201,7 @@ export function Traffic({ city }: { city: City }) {
     }
 
     // Draw (and drive the kinematic bodies).
-    const counts = { car: 0, bus: 0 };
+    const counts = { car: 0, bus: 0, cop: 0 };
     for (const a of sim.agents) {
       const body = bodies.current.get(a);
       if (a.wrecked && body) {
@@ -201,7 +224,19 @@ export function Traffic({ city }: { city: City }) {
         }
       }
       m4.compose(p, q, one);
-      if (a.bus) {
+      if (a.police) {
+        const i = counts.cop++;
+        if (i >= meshes.copBody.instanceMatrix.count) continue;
+        for (const m of [
+          meshes.copBody,
+          meshes.copDoors,
+          meshes.copGlass,
+          meshes.copWheels,
+          meshes.copBar,
+        ]) {
+          m.setMatrixAt(i, m4);
+        }
+      } else if (a.bus) {
         const i = counts.bus++;
         if (i >= meshes.busBody.instanceMatrix.count) continue;
         meshes.busBody.setMatrixAt(i, m4);
@@ -217,7 +252,7 @@ export function Traffic({ city }: { city: City }) {
       }
     }
     for (const [k, mesh] of Object.entries(meshes)) {
-      mesh.count = k.startsWith('bus') ? counts.bus : counts.car;
+      mesh.count = k.startsWith('bus') ? counts.bus : k.startsWith('cop') ? counts.cop : counts.car;
       mesh.instanceMatrix.needsUpdate = true;
       if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
     }

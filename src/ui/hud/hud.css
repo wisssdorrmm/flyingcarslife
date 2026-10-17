@@ -390,13 +390,13 @@
   font-size: 30px;
 }
 .hud-touch .hud-br {
-  bottom: calc(max(12px, env(safe-area-inset-bottom)) + 150px);
+  bottom: calc(max(12px, env(safe-area-inset-bottom)) + 196px);
 }
 .hud-touch .hud-bl {
-  bottom: calc(max(12px, env(safe-area-inset-bottom)) + 150px);
+  bottom: calc(max(12px, env(safe-area-inset-bottom)) + 196px);
 }
 .hud-touch .hud-bc {
-  bottom: calc(max(14px, env(safe-area-inset-bottom)) + 150px);
+  bottom: calc(max(14px, env(safe-area-inset-bottom)) + 196px);
 }
 @media (max-width: 640px) {
   .hud-tl {
@@ -553,7 +553,9 @@
   width: 72px;
   height: 72px;
   color: var(--hud-text);
-  font: 800 14px system-ui, sans-serif;
+  font:
+    800 14px system-ui,
+    sans-serif;
   letter-spacing: 0.04em;
   background: var(--hud-panel);
   border: 1px solid var(--hud-border);
@@ -566,19 +568,30 @@
   font-size: 26px;
 }
 .tc-gas {
-  height: 136px;
+  height: 172px;
   border-color: var(--hud-teal);
   color: var(--hud-teal);
 }
 .tc-drift {
   width: 64px;
-  height: 64px;
+  height: 52px;
   font-size: 12px;
 }
-.tc-brake {
+.tc-brake,
+.tc-launch,
+.tc-up,
+.tc-dn {
   width: 64px;
-  height: 64px;
+  height: 52px;
   font-size: 11px;
+}
+.tc-launch {
+  color: var(--hud-gold);
+  border-color: rgb(255 209 102 / 0.6);
+}
+.tc-up,
+.tc-dn {
+  height: 64px;
 }
 .tc-btn.down {
   color: #071b18;

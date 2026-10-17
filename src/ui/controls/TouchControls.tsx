@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { input, pressAction, releaseAction } from '../../game/systems/input';
+import { useGame } from '../../game/store/game';
+import { input, pressAction, releaseAction, type Action } from '../../game/systems/input';
 import '../hud/hud.css';
 
 type Pad = 'left' | 'right' | 'gas' | 'brake';
@@ -23,7 +24,7 @@ export function TouchControls() {
   useEffect(
     () => () => {
       input.touchMove = { x: 0, y: 0, active: false };
-      releaseAction('jump');
+      for (const a of ['jump', 'attack', 'sprint', 'flyDown'] as const) releaseAction(a);
     },
     [],
   );
@@ -51,22 +52,24 @@ export function TouchControls() {
     className: `tc-btn tc-${p === 'left' || p === 'right' ? `steer-${p}` : p}${held.current.has(p) ? ' down' : ''}`,
   });
 
-  const [drift, setDrift] = useState(false);
-  const driftProps = {
+  // Hold buttons for actions (drift handbrake, launch, climb/descend in the air).
+  const [down, setDown] = useState<Action | null>(null);
+  const action = (a: Action) => ({
     onPointerDown: (e: React.PointerEvent<HTMLButtonElement>) => {
       e.preventDefault();
-      pressAction('jump');
-      setDrift(true);
+      pressAction(a);
+      setDown(a);
     },
     onPointerUp: () => {
-      releaseAction('jump');
-      setDrift(false);
+      releaseAction(a);
+      setDown(null);
     },
     onPointerCancel: () => {
-      releaseAction('jump');
-      setDrift(false);
+      releaseAction(a);
+      setDown(null);
     },
-  };
+  });
+  const flying = useGame((s) => s.vehicleHud?.altitude !== undefined);
 
   return (
     <div className="tc-layer">
@@ -80,12 +83,40 @@ export function TouchControls() {
       </div>
       <div className="tc-right">
         <div className="tc-stack">
-          <button className={`tc-btn tc-drift${drift ? ' down' : ''}`} {...driftProps}>
-            DRIFT
-          </button>
-          <button {...pad('brake')} aria-label="Brake / reverse">
-            BRAKE
-          </button>
+          {flying ? (
+            <>
+              <button
+                className={`tc-btn tc-up${down === 'sprint' ? ' down' : ''}`}
+                {...action('sprint')}
+              >
+                UP
+              </button>
+              <button
+                className={`tc-btn tc-dn${down === 'flyDown' ? ' down' : ''}`}
+                {...action('flyDown')}
+              >
+                DOWN
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                className={`tc-btn tc-launch${down === 'attack' ? ' down' : ''}`}
+                {...action('attack')}
+              >
+                LAUNCH
+              </button>
+              <button
+                className={`tc-btn tc-drift${down === 'jump' ? ' down' : ''}`}
+                {...action('jump')}
+              >
+                DRIFT
+              </button>
+              <button {...pad('brake')} aria-label="Brake / reverse">
+                BRAKE
+              </button>
+            </>
+          )}
         </div>
         <button {...pad('gas')} aria-label="Gas">
           GAS

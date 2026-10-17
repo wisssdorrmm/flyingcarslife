@@ -58,6 +58,8 @@ function roadOf(w: OsmWay): Road | null {
   const cls = CLASS[t.highway ?? ''];
   if (!cls) return null;
   if (t.tunnel && t.tunnel !== 'no') return null;
+  // Elevated freeways/ramps would be draped onto the streets below them: leave them out.
+  if (t.bridge && t.bridge !== 'no' && /^(motorway|trunk)/.test(t.highway ?? '')) return null;
   if (t.area === 'yes' || t.access === 'private') return null;
   if (t.highway === 'service' && /driveway|parking_aisle|drive-through/.test(t.service ?? '')) {
     return null;

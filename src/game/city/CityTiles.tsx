@@ -63,7 +63,7 @@ export function CityTiles({ city, onReady }: { city: City; onReady?: () => void 
   const focus = useMemo(() => new THREE.Vector3(), []);
   const last = useRef(-1);
   const size = city.index.tileSize;
-  const viewRadius = CITY_STREAMING.viewRadius[quality.tier];
+  const baseRadius = CITY_STREAMING.viewRadius[quality.tier];
 
   /** Fixed body holding every tile collider (created in the mount effect below). */
   const bodyRef = useRef<RigidBody | null>(null);
@@ -342,6 +342,7 @@ export function CityTiles({ city, onReady }: { city: City; onReady?: () => void 
 
   /** Loads what's in range of (x, z), nearest first; drops what's well out of range. */
   const stream = (x: number, z: number) => {
+    const viewRadius = baseRadius + (vehicleState.active?.flying ? CITY_STREAMING.flyingBonus : 0);
     const wanted = city.index.tiles
       .map((e) => ({ e, d: tileDistance(e, size, x, z) }))
       .filter((w) => w.d < viewRadius)

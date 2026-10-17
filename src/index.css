@@ -150,7 +150,7 @@ body,
   flex-wrap: wrap;
   align-items: center;
   gap: 6px;
-  max-width: calc(100vw - 24px);
+  max-width: min(460px, calc(100vw - 24px));
   padding: 8px 10px;
   border-radius: 10px;
   background: rgb(10 14 20 / 0.72);
@@ -211,8 +211,6 @@ kbd {
     sans-serif;
   text-align: center;
 }
-
-
 
 .status-hud {
   position: absolute;
@@ -629,7 +627,6 @@ kbd {
     border-top: 1px solid rgb(255 255 255 / 0.06);
   }
 }
-
 
 .profile-backdrop {
   z-index: 8;

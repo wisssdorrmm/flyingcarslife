@@ -77,7 +77,7 @@ async function fetchOsm(): Promise<void> {
  * every element in the box plus the relations that reference them (incl. bus/tram routes).
  */
 async function fetchOsmApi(dest: string): Promise<void> {
-  const N = 4;
+  const N = 6;
   const byKey = new Map<string, { type: string; id: number }>();
   for (let i = 0; i < N; i++) {
     for (let j = 0; j < N; j++) {

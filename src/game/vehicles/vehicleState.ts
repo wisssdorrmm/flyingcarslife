@@ -12,5 +12,13 @@ export const vehicleState = {
     speed: number;
     /** Body color, so other players see the same car. */
     paint: string;
+    /** Airborne under its own power (rocket launch / flight / glide). */
+    flying?: boolean;
+    /** Stable heading for the camera while flying (radians, 0 faces +z). */
+    heading?: number;
+    /** Flight phase (vehicles/flight.ts FlightMode). */
+    flightPhase?: string;
+    /** Moves the car (stopped, on its wheels) — used by debug test scenes. */
+    teleport?: (x: number, y: number, z: number, heading: number) => void;
   },
 };

@@ -6,7 +6,7 @@
 import { PEDESTRIANS } from '../config';
 import type { CityIndex, RoadEdge } from '../city/format';
 
-export type PedState = 'walk' | 'idle' | 'flee' | 'down';
+export type PedState = 'walk' | 'idle' | 'flee' | 'down' | 'look';
 
 export interface Ped {
   id: number;
@@ -26,6 +26,8 @@ export interface Ped {
   /** Seconds idling before walking on. */
   pause: number;
   tint: number;
+  /** Looking up at a launch: films it on a phone instead of pointing. */
+  phone: boolean;
 }
 
 export interface Danger {
@@ -109,6 +111,7 @@ export class PedSim {
       fz: 0,
       pause: 0,
       tint: Math.floor(rand() * 6),
+      phone: false,
     };
     this.peds.push(p);
     return p;
@@ -119,11 +122,30 @@ export class PedSim {
     if (i >= 0) this.peds.splice(i, 1);
   }
 
+  /** A rocket launch at (x, z): people nearby stop and look up (some get their phones out). */
+  lookUp(x: number, z: number, rand: () => number): void {
+    for (const p of this.peds) {
+      if (p.state === 'down' || Math.hypot(p.x - x, p.z - z) > PEDESTRIANS.lookRadius) continue;
+      p.state = 'look';
+      p.timer = PEDESTRIANS.lookSeconds * (0.8 + rand() * 0.4);
+      p.phone = rand() < PEDESTRIANS.phoneShare;
+    }
+  }
+
   step(dt: number, danger: Danger | null, rand: () => number): void {
     for (const p of this.peds) {
       p.timer = Math.max(0, p.timer - dt);
       if (p.state === 'down') {
         if (p.timer <= 0) p.state = 'idle';
+        continue;
+      }
+      if (p.state === 'look') {
+        if (p.timer <= 0) {
+          p.state = 'walk';
+        } else if (danger) {
+          // Keep facing the car as it climbs.
+          p.heading = Math.atan2(danger.x - p.x, danger.z - p.z);
+        }
         continue;
       }
 

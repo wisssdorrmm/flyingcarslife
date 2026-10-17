@@ -1,11 +1,12 @@
 import { useEffect, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import { sparkQueue, tireEmitters } from './tireFxState';
+import { dustQueue, sparkQueue, tireEmitters } from './tireFxState';
 
 const SMOKE_MAX = 180;
 const SKID_MAX = 1400;
 const SPARK_MAX = 140;
+const DEBRIS_MAX = 60;
 
 function smokeTexture(): THREE.CanvasTexture {
   const c = document.createElement('canvas');
@@ -29,7 +30,12 @@ interface Particle {
   life: number;
   size: number;
   spin: number;
+  /** Smoke tint (white tire smoke, tan dust). */
+  color?: THREE.Color;
 }
+
+const SMOKE_WHITE = new THREE.Color('#ffffff');
+const DUST = new THREE.Color('#c9b48f');
 
 /** Tire smoke, skid marks and impact sparks (one draw call each). */
 export function TireFx() {
@@ -105,12 +111,21 @@ export function TireFx() {
     );
     sparks.count = 0;
     sparks.frustumCulled = false;
-    return { smoke, alpha, skids, skidAttr, sparks };
+    // Debris: little chunks kicked up by a rocket launch.
+    const debris = new THREE.InstancedMesh(
+      new THREE.BoxGeometry(0.14, 0.08, 0.11),
+      new THREE.MeshStandardMaterial({ color: '#6d665c', roughness: 0.95 }),
+      DEBRIS_MAX,
+    );
+    debris.count = 0;
+    debris.frustumCulled = false;
+    debris.castShadow = true;
+    return { smoke, alpha, skids, skidAttr, sparks, debris };
   }, []);
 
   useEffect(
     () => () => {
-      for (const m of [fx.smoke, fx.skids, fx.sparks]) {
+      for (const m of [fx.smoke, fx.skids, fx.sparks, fx.debris]) {
         m.geometry.dispose();
         const mat = m.material as THREE.MeshBasicMaterial;
         mat.map?.dispose();
@@ -124,6 +139,7 @@ export function TireFx() {
     () => ({
       smoke: [] as Particle[],
       sparks: [] as Particle[],
+      debris: [] as (Particle & { floor: number; rot: THREE.Euler; spinV: THREE.Vector3 })[],
       spawnAcc: new Map<number, number>(),
       lastSkid: new Map<number, THREE.Vector3>(),
       skidHead: 0,
@@ -164,6 +180,7 @@ export function TireFx() {
       }
       sim.spawnAcc.set(wheel, acc);
 
+      if (e.kind === 'exhaust') continue; // rocket exhaust: smoke only
       const last = sim.lastSkid.get(wheel);
       if (e.slide > 0.3) {
         if (last && last.distanceTo(e.p) > 0.3 && last.distanceTo(e.p) < 4) {
@@ -202,6 +219,40 @@ export function TireFx() {
       } else sim.lastSkid.delete(wheel);
     }
 
+    // Dust bursts (rocket launch): a ring of tan smoke rolling outward.
+    while (dustQueue.length) {
+      const b = dustQueue.shift()!;
+      const n = Math.round(36 * b.strength);
+      for (let i = 0; i < n && sim.smoke.length < SMOKE_MAX; i++) {
+        const a = (i / n) * Math.PI * 2 + Math.random() * 0.3;
+        const sp = 4 + Math.random() * 6;
+        sim.smoke.push({
+          p: new THREE.Vector3(b.x + Math.cos(a) * 0.8, b.y + 0.3, b.z + Math.sin(a) * 0.8),
+          v: new THREE.Vector3(Math.cos(a) * sp, 0.4 + Math.random() * 1.6, Math.sin(a) * sp),
+          age: 0,
+          life: 1.8 + Math.random() * 1.4,
+          size: 1.4 + Math.random(),
+          spin: Math.random() * Math.PI * 2,
+          color: DUST,
+        });
+      }
+      for (let i = 0; i < Math.round(22 * b.strength) && sim.debris.length < DEBRIS_MAX; i++) {
+        const a = Math.random() * Math.PI * 2;
+        const sp = 3 + Math.random() * 7;
+        sim.debris.push({
+          p: new THREE.Vector3(b.x, b.y + 0.2, b.z),
+          v: new THREE.Vector3(Math.cos(a) * sp, 3 + Math.random() * 6, Math.sin(a) * sp),
+          age: 0,
+          life: 2.5 + Math.random(),
+          size: 0.6 + Math.random() * 0.9,
+          spin: 0,
+          floor: b.y,
+          rot: new THREE.Euler(Math.random() * 6, Math.random() * 6, 0),
+          spinV: new THREE.Vector3(Math.random() * 12, Math.random() * 12, Math.random() * 12),
+        });
+      }
+    }
+
     // Sparks from impacts.
     while (sparkQueue.length) {
       const b = sparkQueue.shift()!;
@@ -234,11 +285,13 @@ export function TireFx() {
       sim.q.copy(camera.quaternion);
       sim.q.multiply(new THREE.Quaternion().setFromAxisAngle(sim.z, p.spin + k));
       fx.smoke.setMatrixAt(n, sim.m4.compose(p.p, sim.q, sim.s.setScalar(size)));
+      fx.smoke.setColorAt(n, p.color ?? SMOKE_WHITE);
       alpha[n] = 0.8 * Math.min(1, k * 6) * (1 - k);
       n++;
     }
     fx.smoke.count = n;
     fx.smoke.instanceMatrix.needsUpdate = true;
+    if (fx.smoke.instanceColor) fx.smoke.instanceColor.needsUpdate = true;
     fx.alpha.needsUpdate = true;
 
     // Update sparks.
@@ -254,6 +307,28 @@ export function TireFx() {
     }
     fx.sparks.count = n;
     fx.sparks.instanceMatrix.needsUpdate = true;
+
+    // Debris: ballistic, one bounce off the road, then settles and vanishes.
+    n = 0;
+    sim.debris = sim.debris.filter((p) => (p.age += dt) < p.life);
+    for (const p of sim.debris) {
+      p.v.y -= 9.8 * dt;
+      p.p.addScaledVector(p.v, dt);
+      if (p.p.y < p.floor + 0.04) {
+        p.p.y = p.floor + 0.04;
+        p.v.set(p.v.x * 0.45, Math.abs(p.v.y) * 0.3, p.v.z * 0.45);
+        p.spinV.multiplyScalar(0.5);
+      }
+      p.rot.x += p.spinV.x * dt;
+      p.rot.y += p.spinV.y * dt;
+      p.rot.z += p.spinV.z * dt;
+      sim.q.setFromEuler(p.rot);
+      const shrink = Math.min(1, (p.life - p.age) * 2);
+      fx.debris.setMatrixAt(n, sim.m4.compose(p.p, sim.q, sim.s.setScalar(p.size * shrink)));
+      n++;
+    }
+    fx.debris.count = n;
+    fx.debris.instanceMatrix.needsUpdate = true;
   });
 
   return (
@@ -261,6 +336,7 @@ export function TireFx() {
       <primitive object={fx.skids} />
       <primitive object={fx.smoke} />
       <primitive object={fx.sparks} />
+      <primitive object={fx.debris} />
     </>
   );
 }

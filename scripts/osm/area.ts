@@ -3,8 +3,11 @@
  * Local meters: +x east, +z south (so north is −z, matching three.js "forward"), origin at ORIGIN.
  */
 
-/** North Beach + Fisherman's Wharf (CLAUDE.md §5). */
-export const BBOX = { south: 37.795, west: -122.425, north: 37.812, east: -122.4 } as const;
+/**
+ * North Beach + Fisherman's Wharf (CLAUDE.md §5), plus the Financial District towers and the
+ * Embarcadero down to the Ferry Building / Bay Bridge approach.
+ */
+export const BBOX = { south: 37.789, west: -122.425, north: 37.812, east: -122.391 } as const;
 
 // The local frame is shared with the game (src/game/city/geo.ts).
 export { ORIGIN, project, unproject } from '../../src/game/city/geo';

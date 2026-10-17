@@ -13,6 +13,9 @@ let nodes: {
   roadFilter: BiquadFilterNode;
   screechGain: GainNode;
   screechFilter: BiquadFilterNode;
+  thrustGain: GainNode;
+  thrustFilter: BiquadFilterNode;
+  white: AudioBuffer;
 } | null = null;
 
 function init(): void {
@@ -68,15 +71,42 @@ function init(): void {
   screechGain.gain.value = 0;
   screech.connect(screechFilter).connect(screechGain).connect(master);
 
+  // Thrusters: low roaring noise while flying.
+  const thrustSrc = ctx.createBufferSource();
+  thrustSrc.buffer = white;
+  thrustSrc.loop = true;
+  const thrustFilter = ctx.createBiquadFilter();
+  thrustFilter.type = 'lowpass';
+  thrustFilter.frequency.value = 500;
+  const thrustGain = ctx.createGain();
+  thrustGain.gain.value = 0;
+  thrustSrc.connect(thrustFilter).connect(thrustGain).connect(master);
+
   whine.start();
   whine2.start();
   noise.start();
   screech.start();
-  nodes = { master, whine, whine2, whineGain, roadGain, roadFilter, screechGain, screechFilter };
+  thrustSrc.start();
+  nodes = {
+    master,
+    whine,
+    whine2,
+    whineGain,
+    roadGain,
+    roadFilter,
+    screechGain,
+    screechFilter,
+    thrustGain,
+    thrustFilter,
+    white,
+  };
 }
 
-/** Call every frame while driving. `speed` in m/s, `throttle` and `slide` (tire slide) 0–1. */
-export function updateEvSound(speed: number, throttle: number, slide = 0): void {
+/**
+ * Call every frame while driving. `speed` in m/s; `throttle`, `slide` (tire slide) and `thrust`
+ * (flight thrusters) 0–1.
+ */
+export function updateEvSound(speed: number, throttle: number, slide = 0, thrust = 0): void {
   init();
   if (!ctx || !nodes) return;
   if (ctx.state === 'suspended') void ctx.resume();
@@ -90,6 +120,8 @@ export function updateEvSound(speed: number, throttle: number, slide = 0): void 
   nodes.roadGain.gain.setTargetAtTime(Math.min(s / 30, 1) * 0.12, t, 0.15);
   nodes.roadFilter.frequency.setTargetAtTime(250 + s * 25, t, 0.15);
   nodes.screechGain.gain.setTargetAtTime(slide * 0.22, t, 0.06);
+  nodes.thrustGain.gain.setTargetAtTime(thrust * 0.28, t, 0.12);
+  nodes.thrustFilter.frequency.setTargetAtTime(300 + thrust * 900, t, 0.1);
   nodes.screechFilter.frequency.setTargetAtTime(1700 + Math.sin(t * 23) * 180 + s * 6, t, 0.05);
 }
 
@@ -97,4 +129,38 @@ export function updateEvSound(speed: number, throttle: number, slide = 0): void 
 export function stopEvSound(): void {
   if (!ctx || !nodes) return;
   nodes.master.gain.setTargetAtTime(0, ctx.currentTime, 0.15);
+}
+
+/** Rocket launch: a rising whoosh. */
+export function playWhoosh(): void {
+  init();
+  if (!ctx || !nodes) return;
+  const t = ctx.currentTime;
+  const src = ctx.createBufferSource();
+  src.buffer = nodes.white;
+  src.loop = true;
+  const band = ctx.createBiquadFilter();
+  band.type = 'bandpass';
+  band.Q.value = 1.4;
+  band.frequency.setValueAtTime(250, t);
+  band.frequency.exponentialRampToValueAtTime(2600, t + 1.4);
+  const gain = ctx.createGain();
+  gain.gain.setValueAtTime(0.0001, t);
+  gain.gain.exponentialRampToValueAtTime(0.7, t + 0.12);
+  gain.gain.exponentialRampToValueAtTime(0.0001, t + 2.2);
+  src.connect(band).connect(gain).connect(nodes.master);
+  src.start(t);
+  src.stop(t + 2.3);
+  // Low boom under the whoosh.
+  const boom = ctx.createOscillator();
+  boom.type = 'sine';
+  boom.frequency.setValueAtTime(90, t);
+  boom.frequency.exponentialRampToValueAtTime(32, t + 0.6);
+  const boomGain = ctx.createGain();
+  boomGain.gain.setValueAtTime(0.0001, t);
+  boomGain.gain.exponentialRampToValueAtTime(0.9, t + 0.02);
+  boomGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.9);
+  boom.connect(boomGain).connect(nodes.master);
+  boom.start(t);
+  boom.stop(t + 1);
 }

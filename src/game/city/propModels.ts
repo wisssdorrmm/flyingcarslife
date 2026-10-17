@@ -230,3 +230,29 @@ export function busGeometries(): {
   ]);
   return { body, glass, wheels };
 }
+
+/**
+ * Police cruiser on the generic car body: black body, white doors, roof lightbar with a red and a
+ * blue lamp (separate meshes so they can flash). Fictional, no logos.
+ */
+export function policeCarGeometries(): {
+  body: THREE.BufferGeometry;
+  doors: THREE.BufferGeometry;
+  glass: THREE.BufferGeometry;
+  wheels: THREE.BufferGeometry;
+  lightbar: THREE.BufferGeometry;
+  red: THREE.BufferGeometry;
+  blue: THREE.BufferGeometry;
+} {
+  const car = parkedCarGeometries();
+  const door = (s: number) => place(new THREE.BoxGeometry(0.04, 0.46, 2.1), s * 0.93, 0.66, 0.05);
+  return {
+    body: car.body,
+    doors: merge([door(1), door(-1)]),
+    glass: car.glass,
+    wheels: car.wheels,
+    lightbar: place(new THREE.BoxGeometry(1.25, 0.1, 0.3), 0, 1.38, -0.35),
+    red: place(new THREE.BoxGeometry(0.5, 0.11, 0.26), 0.33, 1.44, -0.35),
+    blue: place(new THREE.BoxGeometry(0.5, 0.11, 0.26), -0.33, 1.44, -0.35),
+  };
+}

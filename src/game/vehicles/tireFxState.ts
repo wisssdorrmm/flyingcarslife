@@ -8,6 +8,8 @@ import * as THREE from 'three';
 export interface TireEmitter {
   p: THREE.Vector3 | null;
   slide: number;
+  /** Tires lay skid marks; rocket exhaust only smokes. */
+  kind: 'tire' | 'exhaust';
 }
 
 export const tireEmitters = new Map<number, TireEmitter>();
@@ -16,9 +18,10 @@ export function setTireEmitter(
   wheel: number,
   p: { x: number; y: number; z: number } | null,
   slide: number,
+  kind: TireEmitter['kind'] = 'tire',
 ): void {
   let e = tireEmitters.get(wheel);
-  if (!e) tireEmitters.set(wheel, (e = { p: null, slide: 0 }));
+  if (!e) tireEmitters.set(wheel, (e = { p: null, slide: 0, kind }));
   if (p) (e.p ??= new THREE.Vector3()).set(p.x, p.y, p.z);
   else e.p = null;
   e.slide = slide;
@@ -54,4 +57,11 @@ export function emitSparks(
     dz: dir.z / l,
     strength: Math.min(strength, 3),
   });
+}
+
+/** Dust bursts (rocket launch): position and strength. */
+export const dustQueue: { x: number; y: number; z: number; strength: number }[] = [];
+
+export function emitDust(at: { x: number; y: number; z: number }, strength = 1): void {
+  dustQueue.push({ x: at.x, y: at.y, z: at.z, strength });
 }

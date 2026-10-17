@@ -2,7 +2,7 @@ import { useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { useRapier } from '@react-three/rapier';
 import * as THREE from 'three';
-import { CAMERA, CHASE_CAMERA } from '../config';
+import { CAMERA, CHASE_CAMERA, FLYING } from '../config';
 import { useGame } from '../store/game';
 import { consumeLook } from '../systems/input';
 import { vehicleState } from './vehicleState';
@@ -15,7 +15,7 @@ import { vehicleState } from './vehicleState';
 export function ChaseCamera() {
   const camera = useThree((s) => s.camera) as THREE.PerspectiveCamera;
   const { world, rapier } = useRapier();
-  const state = useRef({ active: false, orbit: 0, pitch: 0.18, lastLook: 0 });
+  const state = useRef({ active: false, orbit: 0, pitch: 0.18, lastLook: 0, fly: 0, launch: 0 });
   const tmp = useMemo(
     () => ({
       pos: new THREE.Vector3(),
@@ -39,9 +39,16 @@ export function ChaseCamera() {
     const { pos, q, fwd, dir, pivot, want, look } = tmp;
     car.object.getWorldPosition(pos);
     car.object.getWorldQuaternion(q);
-    fwd.set(0, 0, 1).applyQuaternion(q);
-    fwd.y = 0;
-    fwd.normalize();
+    if (car.flying && car.heading !== undefined) {
+      // In the air (and while tumbling) follow the flight heading, not the spinning body.
+      fwd.set(Math.sin(car.heading), 0, Math.cos(car.heading));
+    } else {
+      fwd.set(0, 0, 1).applyQuaternion(q);
+      fwd.y = 0;
+      if (fwd.lengthSq() < 1e-4) fwd.set(0, 0, 1);
+      fwd.normalize();
+    }
+    const flying = !!car.flying;
 
     const l = consumeLook();
     if (l.x !== 0 || l.y !== 0) s.lastLook = clock.elapsedTime;
@@ -58,7 +65,12 @@ export function ChaseCamera() {
     dir.normalize();
     pivot.copy(pos).y += CHASE_CAMERA.lookHeight;
 
-    let distance: number = CHASE_CAMERA.distance;
+    s.fly = THREE.MathUtils.damp(s.fly, flying ? 1 : 0, 2.5, dt);
+    let distance: number = THREE.MathUtils.lerp(
+      CHASE_CAMERA.distance,
+      FLYING.cameraDistance,
+      s.fly,
+    );
     const exclude = world.getRigidBody(car.bodyHandle);
     const hit = world.castRay(
       new rapier.Ray(pivot, dir),
@@ -72,19 +84,24 @@ export function ChaseCamera() {
     if (hit) distance = Math.max(1.5, hit.timeOfImpact - CAMERA.collisionMargin);
 
     want.copy(pivot).addScaledVector(dir, distance);
-    want.y += CHASE_CAMERA.height - CHASE_CAMERA.lookHeight;
+    want.y +=
+      THREE.MathUtils.lerp(CHASE_CAMERA.height, FLYING.cameraHeight, s.fly) -
+      CHASE_CAMERA.lookHeight;
     if (!s.active) {
       camera.position.copy(want);
       s.active = true;
     } else {
       const k = 1 - Math.exp(-CHASE_CAMERA.stiffness * dt);
+      const ky = 1 - Math.exp(-THREE.MathUtils.lerp(CHASE_CAMERA.stiffness, 1.6, s.launch) * dt);
+      const y = camera.position.y + (want.y - camera.position.y) * ky;
       camera.position.lerp(want, k);
+      camera.position.y = y;
       // Never trail through a wall while catching up.
       if (hit) camera.position.copy(want);
     }
     camera.position.y = Math.max(camera.position.y, 0.4);
 
-    look.copy(pivot).addScaledVector(fwd, 2);
+    look.copy(pivot).addScaledVector(fwd, 2 * (1 - s.launch));
     camera.lookAt(look);
     const speedT = THREE.MathUtils.clamp(Math.abs(car.speed) / CHASE_CAMERA.fovSpeed, 0, 1);
     const fov = THREE.MathUtils.lerp(CHASE_CAMERA.fovBase, CHASE_CAMERA.fovAtSpeed, speedT);

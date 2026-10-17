@@ -11,8 +11,8 @@ import {
 import type { DynamicRayCastVehicleController } from '@dimforge/rapier3d-compat';
 import * as THREE from 'three';
 import { modelUrl } from '../../lib/assets';
-import { stopEvSound, updateEvSound } from '../audio/evSound';
-import { DRIVING, HUD_UNITS, PHYSICS, VEHICLE } from '../config';
+import { playWhoosh, stopEvSound, updateEvSound } from '../audio/evSound';
+import { DRIVING, FLYING, HUD_UNITS, PHYSICS, VEHICLE } from '../config';
 import { useGame } from '../store/game';
 import { useNav } from '../store/nav';
 import { useCity } from '../city/cityData';
@@ -23,7 +23,8 @@ import { ArcadeCar } from './arcadeHandling';
 import { carContactHooks } from './contacts';
 import { buildDrivableCar, CAR_MODEL, type CarLook } from './carModel';
 import { crashDrift, updateDrift } from './drift';
-import { emitSparks, setTireEmitter } from './tireFxState';
+import { FlightController } from './flight';
+import { emitDust, emitSparks, setTireEmitter } from './tireFxState';
 import { vehicleState } from './vehicleState';
 
 interface Props extends CarLook {
@@ -77,7 +78,7 @@ export function DrivableCar({ id, position, heading, paint }: Props) {
   const rig = useMemo(() => buildDrivableCar(gltf.scene, { paint }), [gltf, paint]);
   const chassis = useRef<RapierRigidBody>(null);
   const visual = useRef<THREE.Group>(null);
-  const { world } = useRapier();
+  const { world, rapier } = useRapier();
   const vehicle = useRef<DynamicRayCastVehicleController | null>(null);
 
   const sim = useRef({
@@ -126,6 +127,37 @@ export function DrivableCar({ id, position, heading, paint }: Props) {
   }, [world, rig]);
 
   const arcade = useMemo(() => new ArcadeCar(), []);
+  const flight = useMemo(() => new FlightController(), []);
+  // Flying cars look like normal cars: no flames, just a faint heat shimmer under the car in the air.
+  const shimmer = useMemo(() => {
+    const c = document.createElement('canvas');
+    c.width = c.height = 64;
+    const g = c.getContext('2d')!;
+    const grad = g.createRadialGradient(32, 32, 2, 32, 32, 31);
+    grad.addColorStop(0, 'rgba(255,236,210,0.55)');
+    grad.addColorStop(1, 'rgba(255,236,210,0)');
+    g.fillStyle = grad;
+    g.fillRect(0, 0, 64, 64);
+    const mesh = new THREE.Mesh(
+      new THREE.PlaneGeometry(2.6, 4.4).rotateX(-Math.PI / 2),
+      new THREE.MeshBasicMaterial({
+        map: new THREE.CanvasTexture(c),
+        transparent: true,
+        opacity: 0,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+        side: THREE.DoubleSide,
+      }),
+    );
+    mesh.position.set(0, 0.05, 0.2);
+    mesh.visible = false;
+    rig.root.add(mesh);
+    return mesh;
+  }, [rig]);
+  useEffect(() => {
+    const rear = rig.wheels.find((w) => !w.front);
+    if (rear) flight.setRearAxle(rear.center.z, rear.center.y);
+  }, [rig, flight]);
   const fronts = useMemo(() => rig.wheels.map((w) => w.front), [rig]);
 
   useBeforePhysicsStep(() => {
@@ -148,7 +180,48 @@ export function DrivableCar({ id, position, heading, paint }: Props) {
       handbrake = input.held.has('jump');
       shiftUp = consumePress('sprint');
       shiftDown = consumePress('flyDown');
-      if (consumePress('reload')) resetOntoRoad(rb);
+      if (consumePress('reload')) {
+        flight.reset(rb);
+        resetOntoRoad(rb);
+      }
+      if (consumePress('attack') && !flight.airborne && s.battery > FLYING.launchCost) {
+        if (flight.launch(rb)) {
+          s.battery -= FLYING.launchCost;
+          playWhoosh();
+          emitDust(rb.translation(), 1.6);
+        }
+      }
+    }
+
+    if (flight.airborne) {
+      const free = !useNav.getState().mapOpen;
+      const climb = free && (input.held.has('sprint') || input.held.has('jump'));
+      const descend = free && input.held.has('flyDown');
+      // Distance to the road or roof below (the car's origin sits at wheel-bottom height).
+      const ground = () => {
+        const p = rb.translation();
+        const hit = world.castRay(
+          new rapier.Ray({ x: p.x, y: p.y + 0.5, z: p.z }, { x: 0, y: -1, z: 0 }),
+          500,
+          true,
+          undefined,
+          undefined,
+          undefined,
+          rb,
+        );
+        return hit ? hit.timeOfImpact - 0.5 : Infinity;
+      };
+      const used = flight.step(
+        rb,
+        { throttle: throttleIn, steer: steerIn, climb, descend },
+        s.battery,
+        ground,
+        dt,
+      );
+      s.battery = Math.max(0, s.battery - used);
+      s.throttle = flight.thrust;
+      updateDrift(dt, 0, 0);
+      return;
     }
 
     const speed = arcade.telemetry.forward;
@@ -207,6 +280,8 @@ export function DrivableCar({ id, position, heading, paint }: Props) {
       emitSparks(rb.translation(), e.maxForceDirection, impulse / VEHICLE.damageThreshold);
     }
     if (impulse > VEHICLE.damageThreshold * 0.6) crashDrift();
+    // Scraping the road during the nose-up / tumbling launch isn't a crash.
+    if (flight.launching) return;
     if (impulse > VEHICLE.damageThreshold) {
       const s = sim.current;
       s.damage = Math.min(
@@ -227,6 +302,18 @@ export function DrivableCar({ id, position, heading, paint }: Props) {
       bodyHandle: rb.handle,
       speed: 0,
       paint: String(paint),
+      teleport: (x, y, z, h) => {
+        flight.reset(rb);
+        rb.setTranslation({ x, y, z }, true);
+        rb.setRotation({ x: 0, y: Math.sin(h / 2), z: 0, w: Math.cos(h / 2) }, true);
+        rb.setLinvel({ x: 0, y: 0, z: 0 }, true);
+        rb.setAngvel({ x: 0, y: 0, z: 0 }, true);
+        // Hover a moment while the destination's colliders stream in.
+        rb.setGravityScale(0, true);
+        window.setTimeout(() => {
+          if (!flight.airborne) rb.setGravityScale(1, true);
+        }, 700);
+      },
     };
     useGame.getState().enterVehicle(id);
     // Debug hook for automated handling checks.
@@ -235,7 +322,7 @@ export function DrivableCar({ id, position, heading, paint }: Props) {
       if (vehicleState.active?.id === id) vehicleState.active = null;
       stopEvSound();
     };
-  }, [id, paint, arcade]);
+  }, [id, paint, arcade, flight]);
 
   useFrame((_, dt) => {
     const vc = vehicle.current;
@@ -245,34 +332,58 @@ export function DrivableCar({ id, position, heading, paint }: Props) {
     const s = sim.current;
     const game = useGame.getState();
 
-    // Wheels: suspension travel, steering and spin.
-    rig.wheels.forEach((w, i) => {
-      const susp = vc.wheelSuspensionLength(i) ?? VEHICLE.suspensionRestLength;
-      w.pivot.position.y = w.center.y + MOUNT_OFFSET - susp;
-      w.pivot.rotation.y = vc.wheelSteering(i) ?? 0;
-      w.spin.rotation.x = vc.wheelRotation(i) ?? 0;
-    });
+    // Wheels: suspension travel, steering and spin (left as they are while airborne).
+    if (!flight.airborne) {
+      rig.wheels.forEach((w, i) => {
+        const susp = vc.wheelSuspensionLength(i) ?? VEHICLE.suspensionRestLength;
+        w.pivot.position.y = w.center.y + MOUNT_OFFSET - susp;
+        w.pivot.rotation.y = vc.wheelSteering(i) ?? 0;
+        w.spin.rotation.x = vc.wheelRotation(i) ?? 0;
+      });
+    }
+    const heat = shimmer.material as THREE.MeshBasicMaterial;
+    heat.opacity = THREE.MathUtils.damp(
+      heat.opacity,
+      flight.airborne ? 0.04 + 0.08 * flight.thrust : 0,
+      5,
+      dt,
+    );
+    shimmer.visible = heat.opacity > 0.01;
+    shimmer.scale.setScalar(1 + Math.sin(performance.now() * 0.03) * 0.04);
 
     const tel = arcade.telemetry;
-    const speed = tel.forward;
-    if (vehicleState.active) vehicleState.active.speed = speed;
-    updateEvSound(speed, s.throttle, tel.tireSlide);
-    // Rear tires: smoke and skid marks where they touch the road.
+    const lv = rb.linvel();
+    const speed = flight.airborne ? Math.hypot(lv.x, lv.z) : tel.forward;
+    const active = vehicleState.active;
+    if (active) {
+      active.speed = speed;
+      active.flying = flight.airborne;
+      active.heading = flight.heading;
+      active.flightPhase = flight.mode;
+    }
+    updateEvSound(speed, s.throttle, flight.airborne ? 0 : tel.tireSlide, flight.thrust);
+    // Rear tires: smoke and skid marks where they touch the road. Rocket exhaust while launching.
     rig.wheels.forEach((w, i) => {
       if (w.front) return;
       const p = vc.wheelContactPoint(i);
-      setTireEmitter(i, p && vc.wheelIsInContact(i) ? p : null, tel.tireSlide);
+      setTireEmitter(i, p && vc.wheelIsInContact(i) && !flight.airborne ? p : null, tel.tireSlide);
     });
+    const launching = flight.mode === 'noseUp' || flight.mode === 'rocket';
+    const pos = rb.translation();
+    setTireEmitter(99, launching ? pos : null, launching ? 1 : 0, 'exhaust');
 
     s.hudTimer -= dt;
     if (s.hudTimer <= 0) {
       s.hudTimer = HUD_INTERVAL;
       game.setVehicleHud({
-        speed: Math.round(tel.speed * MS_TO_UNITS),
+        speed: Math.round(Math.abs(speed) * MS_TO_UNITS),
         battery: Math.round(s.battery),
         damage: Math.round(s.damage),
         reversing: speed < -0.3,
-        gear: tel.gear,
+        gear: flight.airborne ? 'F' : tel.gear,
+        altitude: flight.airborne
+          ? Math.max(0, Math.round(pos.y - (useCity.getState().city?.heightAt(pos.x, pos.z) ?? 0)))
+          : undefined,
       });
     }
   });

@@ -28,6 +28,8 @@ export interface Leg {
 export interface Agent {
   id: number;
   bus: boolean;
+  /** Police cruiser driving in traffic (ignores the player unless told otherwise). */
+  police: boolean;
   paint: number;
   leg: Leg;
   next: Leg | null;
@@ -230,11 +232,48 @@ export class TrafficSim {
     const a: Agent = {
       id: this.nextId++,
       bus,
+      police: false,
       paint: Math.floor(rand() * 8),
       leg,
       next: null,
       s: 0,
       v: (TRAFFIC.speed[e.cls] ?? 10) * 0.7,
+      x: leg.pts[0]!,
+      z: leg.pts[1]!,
+      heading: 0,
+      dx: 0,
+      dz: 1,
+      stuck: 0,
+      wrecked: false,
+      wreckAge: 0,
+    };
+    this.place(a);
+    this.agents.push(a);
+    return a;
+  }
+
+  /**
+   * Adds a car on a given road, direction and distance along it (travel direction), in the
+   * rightmost lane — used to put a police car right behind the player in a test scene.
+   */
+  spawnOn(
+    edge: number,
+    fwd: boolean,
+    along: number,
+    opts: { police?: boolean; speed?: number } = {},
+  ): Agent {
+    const e = this.edges[edge]!;
+    const lane = this.lanesFor(e, fwd) - 1;
+    const leg = this.laneLeg(edge, fwd, lane, Math.max(0, along));
+    const a: Agent = {
+      id: this.nextId++,
+      bus: false,
+      police: !!opts.police,
+      paint: 1,
+      leg,
+      next: null,
+      s: 0,
+      v: opts.speed ?? 8,
       x: leg.pts[0]!,
       z: leg.pts[1]!,
       heading: 0,
