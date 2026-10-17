@@ -11,6 +11,8 @@ export interface VehicleHud {
   reversing: boolean;
   /** Gear letter: R, N or 1–6. */
   gear: string;
+  /** Height above ground (m) while flying, else absent. */
+  altitude?: number;
 }
 
 interface GameState {

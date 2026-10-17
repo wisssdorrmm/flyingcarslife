@@ -14,6 +14,7 @@ import {
   type AnimState,
 } from '../player/characterModel';
 import { useSettings } from '../store/settings';
+import { useUi } from '../store/ui';
 import { vehicleState } from '../vehicles/vehicleState';
 import { PedSim, type Ped } from './pedSim';
 
@@ -92,6 +93,7 @@ export function Pedestrians({ city }: { city: City }) {
     const dt = Math.min(rawDt, 0.1);
     const car = vehicleState.active?.object;
     if (!car) return;
+    if (useUi.getState().menuOpen) return;
     car.getWorldPosition(focus);
     // Car velocity from frame-to-frame movement.
     const prev = last.current ?? focus.clone();

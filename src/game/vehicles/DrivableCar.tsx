@@ -15,6 +15,7 @@ import { stopEvSound, updateEvSound } from '../audio/evSound';
 import { DRIVING, HUD_UNITS, PHYSICS, VEHICLE } from '../config';
 import { useGame } from '../store/game';
 import { useNav } from '../store/nav';
+import { useCity } from '../city/cityData';
 import { useCareer } from '../store/career';
 import { useSettings } from '../store/settings';
 import { consumePress, input, readMove } from '../systems/input';
@@ -33,6 +34,36 @@ interface Props extends CarLook {
 }
 
 const HUD_INTERVAL = 0.1;
+
+/** R: put the car back on its wheels on the nearest road, facing along it. */
+function resetOntoRoad(rb: RapierRigidBody): void {
+  const city = useCity.getState().city;
+  const p = rb.translation();
+  const hit = city?.graph.nearest(p.x, p.z, 120);
+  if (!city || !hit) return;
+  const e = city.index.edges[hit.edge]!;
+  // Direction of the road at the snapped point.
+  let best = 0;
+  let bestD = Infinity;
+  for (let i = 0; i + 3 < e.pts.length; i += 2) {
+    const d = Math.hypot(e.pts[i]! - hit.x, e.pts[i + 1]! - hit.z);
+    if (d < bestD) {
+      bestD = d;
+      best = i;
+    }
+  }
+  const dx = e.pts[best + 2]! - e.pts[best]!;
+  const dz = e.pts[best + 3]! - e.pts[best + 1]!;
+  const r = rb.rotation();
+  const fwd = new THREE.Vector3(0, 0, 1).applyQuaternion(new THREE.Quaternion(r.x, r.y, r.z, r.w));
+  // Keep roughly the way we were facing.
+  const flip = fwd.x * dx + fwd.z * dz < 0 && !e.oneway ? Math.PI : 0;
+  const yaw = Math.atan2(dx, dz) + flip;
+  rb.setTranslation({ x: hit.x, y: city.heightAt(hit.x, hit.z) + 0.6, z: hit.z }, true);
+  rb.setRotation({ x: 0, y: Math.sin(yaw / 2), z: 0, w: Math.cos(yaw / 2) }, true);
+  rb.setLinvel({ x: 0, y: 0, z: 0 }, true);
+  rb.setAngvel({ x: 0, y: 0, z: 0 }, true);
+}
 /**
  * Rapier scales suspension force by chassis mass, so each wheel compresses by g / (4·stiffness) at
  * rest. Mount the suspension that much lower so the car sits at its modeled ride height.
@@ -117,6 +148,7 @@ export function DrivableCar({ id, position, heading, paint }: Props) {
       handbrake = input.held.has('jump');
       shiftUp = consumePress('sprint');
       shiftDown = consumePress('flyDown');
+      if (consumePress('reload')) resetOntoRoad(rb);
     }
 
     const speed = arcade.telemetry.forward;

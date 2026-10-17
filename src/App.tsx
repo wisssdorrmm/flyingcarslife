@@ -4,11 +4,9 @@ import { QUALITY_TIERS } from './game/quality';
 import { useSettings } from './game/store/settings';
 import { detectDevice } from './game/quality';
 import { TouchControls } from './ui/controls/TouchControls';
-import { LocationLabel } from './ui/hud/LocationLabel';
-import { Minimap } from './ui/hud/Minimap';
+import { Hud } from './ui/hud/Hud';
 import { MapScreen } from './ui/map/MapScreen';
-import { Speedometer } from './ui/hud/Speedometer';
-import { Toasts } from './ui/hud/Toasts';
+import { PauseMenu } from './ui/menus/PauseMenu';
 import { LoadingScreen } from './ui/menus/LoadingScreen';
 
 // The 3D engine is split out so the shell paints instantly while three/rapier download.
@@ -28,11 +26,9 @@ export default function App() {
       <Suspense fallback={null}>
         <Game />
       </Suspense>
-      <LocationLabel />
-      {!freecam && <Minimap />}
-      <Toasts />
+      {!freecam && <Hud touch={showTouch} />}
       <MapScreen />
-      <Speedometer />
+      <PauseMenu />
       <LoadingScreen />
       {showTouch && !freecam && <TouchControls />}
       {debug && <DebugPanel />}

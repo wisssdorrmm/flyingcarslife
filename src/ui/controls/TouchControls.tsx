@@ -1,125 +1,94 @@
 import { useEffect, useRef, useState } from 'react';
-import { INPUT } from '../../game/config';
-import { useNav } from '../../game/store/nav';
-import { addLook, input, pressAction, releaseAction } from '../../game/systems/input';
+import { input, pressAction, releaseAction } from '../../game/systems/input';
+import '../hud/hud.css';
 
-const JOYSTICK_RADIUS = 56;
-
-interface Stick {
-  id: number;
-  originX: number;
-  originY: number;
-  x: number;
-  y: number;
-}
+type Pad = 'left' | 'right' | 'gas' | 'brake';
 
 /**
- * On-screen controls for phones: a floating joystick on the left half, drag-to-look on the right
- * half, and action buttons. Writes straight into the shared input state.
+ * Phone controls: hold-to-steer buttons on the left; gas, brake and the drift handbrake on the
+ * right. Steering and pedals feed the shared touch move vector (x = steer, y = throttle).
  */
 export function TouchControls() {
-  const [stick, setStick] = useState<Stick | null>(null);
-  const lookId = useRef<number | null>(null);
-  const lookLast = useRef({ x: 0, y: 0 });
-  const stickRef = useRef<Stick | null>(null);
+  const held = useRef(new Set<Pad>());
+  const [, force] = useState(0);
+
+  const sync = () => {
+    const h = held.current;
+    const x = (h.has('right') ? 1 : 0) - (h.has('left') ? 1 : 0);
+    const y = (h.has('gas') ? 1 : 0) - (h.has('brake') ? 1 : 0);
+    input.touchMove = { x, y, active: h.size > 0 };
+    force((n) => n + 1);
+  };
 
   useEffect(
     () => () => {
-      input.touchMove.active = false;
+      input.touchMove = { x: 0, y: 0, active: false };
+      releaseAction('jump');
     },
     [],
   );
 
-  const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (e.pointerType === 'mouse') return;
-    try {
-      e.currentTarget.setPointerCapture(e.pointerId);
-    } catch {
-      // Some browsers refuse capture for synthetic/cancelled pointers; tracking still works.
-    }
-    if (e.clientX < window.innerWidth * 0.45 && !stickRef.current) {
-      const s = { id: e.pointerId, originX: e.clientX, originY: e.clientY, x: 0, y: 0 };
-      stickRef.current = s;
-      setStick(s);
-      input.touchMove = { x: 0, y: 0, active: true };
-    } else if (lookId.current === null) {
-      lookId.current = e.pointerId;
-      lookLast.current = { x: e.clientX, y: e.clientY };
-    }
-  };
-
-  const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    const s = stickRef.current;
-    if (s && e.pointerId === s.id) {
-      let dx = e.clientX - s.originX;
-      let dy = e.clientY - s.originY;
-      const len = Math.hypot(dx, dy);
-      if (len > JOYSTICK_RADIUS) {
-        dx = (dx / len) * JOYSTICK_RADIUS;
-        dy = (dy / len) * JOYSTICK_RADIUS;
+  const pad = (p: Pad) => ({
+    onPointerDown: (e: React.PointerEvent<HTMLButtonElement>) => {
+      e.preventDefault();
+      try {
+        e.currentTarget.setPointerCapture(e.pointerId);
+      } catch {
+        // Capture can fail for synthetic pointers; the button still works.
       }
-      const next = { ...s, x: dx, y: dy };
-      stickRef.current = next;
-      setStick(next);
-      input.touchMove = { x: dx / JOYSTICK_RADIUS, y: -dy / JOYSTICK_RADIUS, active: true };
-    } else if (e.pointerId === lookId.current) {
-      addLook(
-        (e.clientX - lookLast.current.x) * INPUT.touchSensitivity,
-        (e.clientY - lookLast.current.y) * INPUT.touchSensitivity,
-      );
-      lookLast.current = { x: e.clientX, y: e.clientY };
-    }
-  };
-
-  const onPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (stickRef.current && e.pointerId === stickRef.current.id) {
-      stickRef.current = null;
-      setStick(null);
-      input.touchMove = { x: 0, y: 0, active: false };
-    }
-    if (e.pointerId === lookId.current) lookId.current = null;
-  };
-
-  const hold = (action: 'jump') => ({
-    onPointerDown: (e: React.PointerEvent) => {
-      e.stopPropagation();
-      pressAction(action);
+      held.current.add(p);
+      sync();
     },
-    onPointerUp: (e: React.PointerEvent) => {
-      e.stopPropagation();
-      releaseAction(action);
+    onPointerUp: () => {
+      held.current.delete(p);
+      sync();
     },
-    onPointerCancel: () => releaseAction(action),
+    onPointerCancel: () => {
+      held.current.delete(p);
+      sync();
+    },
+    // Steer buttons get their own names (.tc-left/.tc-right are the button groups).
+    className: `tc-btn tc-${p === 'left' || p === 'right' ? `steer-${p}` : p}${held.current.has(p) ? ' down' : ''}`,
   });
 
+  const [drift, setDrift] = useState(false);
+  const driftProps = {
+    onPointerDown: (e: React.PointerEvent<HTMLButtonElement>) => {
+      e.preventDefault();
+      pressAction('jump');
+      setDrift(true);
+    },
+    onPointerUp: () => {
+      releaseAction('jump');
+      setDrift(false);
+    },
+    onPointerCancel: () => {
+      releaseAction('jump');
+      setDrift(false);
+    },
+  };
+
   return (
-    <div
-      className="touch-layer"
-      onPointerDown={onPointerDown}
-      onPointerMove={onPointerMove}
-      onPointerUp={onPointerUp}
-      onPointerCancel={onPointerUp}
-    >
-      {stick && (
-        <div className="joystick" style={{ left: stick.originX, top: stick.originY }}>
-          <div
-            className="joystick-knob"
-            style={{ transform: `translate(${stick.x}px, ${stick.y}px)` }}
-          />
+    <div className="tc-layer">
+      <div className="tc-left">
+        <button {...pad('left')} aria-label="Steer left">
+          ◀
+        </button>
+        <button {...pad('right')} aria-label="Steer right">
+          ▶
+        </button>
+      </div>
+      <div className="tc-right">
+        <div className="tc-stack">
+          <button className={`tc-btn tc-drift${drift ? ' down' : ''}`} {...driftProps}>
+            DRIFT
+          </button>
+          <button {...pad('brake')} aria-label="Brake / reverse">
+            BRAKE
+          </button>
         </div>
-      )}
-      <button
-        className="touch-btn map-btn"
-        onPointerDown={(e) => {
-          e.stopPropagation();
-          useNav.getState().setMapOpen(true);
-        }}
-      >
-        Map
-      </button>
-      <div className="touch-buttons">
-        <button className="touch-btn primary" {...hold('jump')}>
-          Drift
+        <button {...pad('gas')} aria-label="Gas">
+          GAS
         </button>
       </div>
     </div>

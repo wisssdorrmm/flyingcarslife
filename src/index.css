@@ -173,65 +173,6 @@ body,
   color: #0b0f14;
 }
 
-.touch-layer {
-  position: absolute;
-  inset: 0;
-  touch-action: none;
-}
-
-.joystick {
-  position: absolute;
-  width: 112px;
-  height: 112px;
-  margin: -56px 0 0 -56px;
-  border: 2px solid rgb(255 255 255 / 0.35);
-  border-radius: 50%;
-  background: rgb(10 14 20 / 0.25);
-  pointer-events: none;
-}
-
-.joystick-knob {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 48px;
-  height: 48px;
-  margin: -24px 0 0 -24px;
-  border-radius: 50%;
-  background: rgb(232 237 242 / 0.8);
-}
-
-.touch-buttons {
-  position: absolute;
-  right: max(16px, env(safe-area-inset-right));
-  bottom: max(24px, env(safe-area-inset-bottom));
-  display: flex;
-  align-items: flex-end;
-  gap: 14px;
-}
-
-.touch-btn {
-  width: 64px;
-  height: 64px;
-  border: 2px solid rgb(255 255 255 / 0.35);
-  border-radius: 50%;
-  background: rgb(10 14 20 / 0.45);
-  color: #e8edf2;
-  font:
-    600 12px/1 system-ui,
-    sans-serif;
-  touch-action: none;
-}
-
-.touch-btn.primary {
-  width: 78px;
-  height: 78px;
-}
-
-.touch-btn.active {
-  background: rgb(124 196 255 / 0.55);
-}
-
 /* On phones the bottom corners belong to the joystick and action buttons. */
 .help-panel.top,
 .help-toggle.top {
@@ -271,123 +212,7 @@ kbd {
   text-align: center;
 }
 
-.speedometer {
-  position: absolute;
-  right: max(16px, env(safe-area-inset-right));
-  bottom: max(16px, env(safe-area-inset-bottom));
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  min-width: 170px;
-  padding: 10px 14px;
-  border-radius: 12px;
-  background: rgb(10 14 20 / 0.6);
-  font-variant-numeric: tabular-nums;
-  pointer-events: none;
-}
 
-.speed {
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-}
-
-.speed-value {
-  font-size: 36px;
-  font-weight: 700;
-  line-height: 1;
-}
-
-.speed-unit {
-  font-size: 12px;
-  text-transform: uppercase;
-  opacity: 0.7;
-}
-
-.meter {
-  display: grid;
-  grid-template-columns: 56px 1fr 36px;
-  align-items: center;
-  gap: 8px;
-  font-size: 11px;
-}
-
-.meter-label,
-.meter-value {
-  opacity: 0.75;
-}
-
-.meter-value {
-  text-align: right;
-}
-
-.meter-bar {
-  height: 5px;
-  overflow: hidden;
-  border-radius: 3px;
-  background: rgb(255 255 255 / 0.15);
-}
-
-.meter-fill {
-  height: 100%;
-  background: #6fd3a0;
-}
-
-.meter-fill.warn {
-  background: #f2b33d;
-}
-
-.meter-fill.bad {
-  background: #e5604f;
-}
-
-.touch-btn.accent {
-  background: rgb(111 211 160 / 0.55);
-}
-
-/* On phones the speedometer sits above the action buttons. */
-@media (pointer: coarse) {
-  .speedometer {
-    bottom: calc(max(24px, env(safe-area-inset-bottom)) + 96px);
-    min-width: 150px;
-  }
-}
-
-.location-label {
-  position: absolute;
-  top: max(12px, env(safe-area-inset-top));
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 6px 14px;
-  border-radius: 10px;
-  background: rgb(10 14 20 / 0.55);
-  font-size: 14px;
-  font-weight: 600;
-  white-space: nowrap;
-  pointer-events: none;
-}
-
-.location-city {
-  font-size: 10px;
-  font-weight: 500;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  opacity: 0.65;
-}
-
-/* Keep the location clear of the help panel that sits top-left on phones. */
-@media (max-width: 520px) {
-  .location-label {
-    top: auto;
-    bottom: calc(max(24px, env(safe-area-inset-bottom)) + 92px);
-    left: 16px;
-    transform: none;
-    align-items: flex-start;
-  }
-}
 
 .status-hud {
   position: absolute;
@@ -480,28 +305,6 @@ kbd {
 
 .band-obese {
   color: #ff7a6b;
-}
-
-.toasts {
-  position: absolute;
-  left: 50%;
-  bottom: max(36%, 190px);
-  transform: translateX(-50%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  pointer-events: none;
-}
-
-.toast {
-  max-width: min(420px, calc(100vw - 32px));
-  padding: 7px 14px;
-  border-radius: 999px;
-  background: rgb(10 14 20 / 0.8);
-  font-size: 13px;
-  text-align: center;
-  animation: toast-in 0.2s ease;
 }
 
 @keyframes toast-in {
@@ -683,45 +486,6 @@ kbd {
   }
 }
 
-.minimap {
-  position: absolute;
-  left: max(14px, env(safe-area-inset-left));
-  bottom: max(14px, env(safe-area-inset-bottom));
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-}
-
-.minimap canvas {
-  border-radius: 50%;
-  box-shadow: 0 4px 18px rgb(0 0 0 / 0.45);
-  cursor: pointer;
-}
-
-.minimap-label {
-  max-width: 200px;
-  overflow: hidden;
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: rgb(10 14 20 / 0.65);
-  font-size: 11px;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-
-.minimap-label:empty {
-  display: none;
-}
-
-.map-btn {
-  position: absolute;
-  right: max(16px, env(safe-area-inset-right));
-  top: calc(max(12px, env(safe-area-inset-top)) + 290px);
-  width: 52px;
-  height: 52px;
-}
-
 .map-screen {
   position: absolute;
   inset: 0;
@@ -866,19 +630,6 @@ kbd {
   }
 }
 
-/* Phones: the bottom corners belong to the joystick and buttons; the minimap sits top-right. */
-@media (pointer: coarse), (max-width: 520px) {
-  .minimap {
-    left: auto;
-    right: max(12px, env(safe-area-inset-right));
-    bottom: auto;
-    top: calc(max(12px, env(safe-area-inset-top)) + 150px);
-  }
-  .minimap canvas {
-    width: 120px !important;
-    height: 120px !important;
-  }
-}
 
 .profile-backdrop {
   z-index: 8;

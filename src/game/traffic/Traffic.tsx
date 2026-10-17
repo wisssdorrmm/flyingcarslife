@@ -7,6 +7,7 @@ import { TRAFFIC } from '../config';
 import type { City } from '../city/cityData';
 import { busGeometries, parkedCarGeometries, PARKED_PAINTS } from '../city/propModels';
 import { useSettings } from '../store/settings';
+import { useUi } from '../store/ui';
 import { carContactHooks } from '../vehicles/contacts';
 import { vehicleState } from '../vehicles/vehicleState';
 import { TrafficSim, trafficRef, type Agent } from './trafficSim';
@@ -129,6 +130,7 @@ export function Traffic({ city }: { city: City }) {
     const dt = Math.min(rawDt, 0.1);
     const car = vehicleState.active;
     if (!car) return;
+    if (useUi.getState().menuOpen) return;
     car.object.getWorldPosition(focus);
 
     // Keep the population topped up, spawning out of close view.

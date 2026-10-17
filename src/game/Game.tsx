@@ -6,6 +6,7 @@ import * as THREE from 'three';
 import { PHYSICS, WORLD_LIGHTING } from './config';
 import { City } from './city/City';
 import { useSettings } from './store/settings';
+import { useUi } from './store/ui';
 import { DesktopInput } from './systems/DesktopInput';
 import { ChaseCamera } from './vehicles/ChaseCamera';
 import { DebugCamera } from './world/DebugCamera';
@@ -25,6 +26,7 @@ export default function Game() {
   const quality = useSettings((s) => s.quality);
   const debug = useSettings((s) => s.debug);
   const freecam = debug && freecamRequested;
+  const menuOpen = useUi((s) => s.menuOpen);
 
   return (
     <Canvas
@@ -54,7 +56,7 @@ export default function Game() {
           interpolate
           debug={debug && showColliders}
           updatePriority={-50}
-          paused={debug && pausePhysics}
+          paused={(debug && pausePhysics) || menuOpen}
         >
           <SkyAndSun />
           <City />

@@ -1,14 +1,15 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useCity } from '../../game/city/cityData';
 import { currentPose, useNav } from '../../game/store/nav';
 import { cityMapLayer, MAP_COLORS, MAP_SCALE } from '../map/cityMapLayer';
 import { formatDistance } from '../map/format';
 
-const SIZE = 168;
+const SIZE = 150;
 /** Meters shown from the center to the edge. */
 const RANGE = 160;
 
-/** Round, heading-up minimap with the GPS route; tap/click to open the full map. */
-export function Minimap() {
+/** Round, heading-up minimap with the GPS route and the district + street under it. */
+export function Minimap({ size = SIZE }: { size?: number }) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const label = useRef<HTMLSpanElement>(null);
   const setMapOpen = useNav((s) => s.setMapOpen);
@@ -18,7 +19,7 @@ export function Minimap() {
     const ctx = c?.getContext('2d');
     if (!c || !ctx) return;
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    c.width = c.height = SIZE * dpr;
+    c.width = c.height = size * dpr;
     let raf = 0;
     let lastDraw = 0;
     const draw = (t: number) => {
@@ -28,16 +29,16 @@ export function Minimap() {
       const pose = currentPose();
       if (!pose) return;
       const nav = useNav.getState();
-      const r = SIZE / 2;
+      const r = size / 2;
       const k = r / RANGE; // screen px per meter
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      ctx.clearRect(0, 0, SIZE, SIZE);
+      ctx.clearRect(0, 0, size, size);
       ctx.save();
       ctx.beginPath();
       ctx.arc(r, r, r - 1, 0, Math.PI * 2);
       ctx.clip();
       ctx.fillStyle = MAP_COLORS.water;
-      ctx.fillRect(0, 0, SIZE, SIZE);
+      ctx.fillRect(0, 0, size, size);
       // Heading up: rotate the world so the facing direction points to the top.
       ctx.translate(r, r);
       ctx.rotate(-Math.atan2(pose.fx, -pose.fz));
@@ -104,18 +105,45 @@ export function Minimap() {
     };
     raf = requestAnimationFrame(draw);
     return () => cancelAnimationFrame(raf);
-  }, []);
+  }, [size]);
 
   return (
-    <div className="minimap">
+    <div className="hud-map">
       <canvas
         ref={canvas}
-        style={{ width: SIZE, height: SIZE }}
+        style={{ width: size, height: size }}
         onClick={() => setMapOpen(true)}
         aria-label="Minimap — open the city map"
         role="button"
       />
-      <span ref={label} className="minimap-label" />
+      <Location />
+      <span ref={label} className="hud-route" />
+    </div>
+  );
+}
+
+/** Neighborhood and street (plus the cross street near junctions), twice a second. */
+function Location() {
+  const city = useCity((s) => s.city);
+  const [loc, setLoc] = useState<{ district: string; street: string } | null>(null);
+  useEffect(() => {
+    if (!city) return;
+    const id = window.setInterval(() => {
+      const pose = currentPose();
+      if (!pose) return;
+      const { street, cross, district } = city.graph.locate(pose.x, pose.z);
+      const next = { district, street: cross ? `${street} & ${cross}` : street };
+      setLoc((prev) =>
+        prev && prev.district === next.district && prev.street === next.street ? prev : next,
+      );
+    }, 500);
+    return () => window.clearInterval(id);
+  }, [city]);
+  if (!loc) return null;
+  return (
+    <div className="hud-location hud-panel">
+      <span className="hud-location-district">{loc.district}</span>
+      {loc.street && <span className="hud-location-street">{loc.street}</span>}
     </div>
   );
 }
