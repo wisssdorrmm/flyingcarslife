@@ -1197,3 +1197,114 @@ kbd {
   height: 52px;
   font-size: 10px;
 }
+
+.social-prompt {
+  bottom: max(34%, 180px);
+}
+
+.interact-panel {
+  position: absolute;
+  left: 50%;
+  bottom: max(110px, 16%);
+  transform: translateX(-50%);
+  width: min(380px, calc(100vw - 32px));
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: rgb(14 18 24 / 0.92);
+}
+
+.interact-panel header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.interact-panel header div {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+}
+
+.interact-panel header em {
+  font-size: 12px;
+  font-style: normal;
+  opacity: 0.7;
+}
+
+.interact-panel .dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+.interact-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 12px 0 10px;
+}
+
+.interact-actions button {
+  min-height: 44px;
+  border: 1px solid rgb(255 255 255 / 0.14);
+  border-radius: 12px;
+  background: rgb(255 255 255 / 0.05);
+  color: inherit;
+  font:
+    600 13px system-ui,
+    sans-serif;
+}
+
+.interact-panel footer {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.interact-panel footer button,
+.request-card button {
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid rgb(255 255 255 / 0.16);
+  border-radius: 10px;
+  background: transparent;
+  color: inherit;
+  font:
+    600 12px system-ui,
+    sans-serif;
+}
+
+.request-card {
+  position: absolute;
+  top: calc(max(12px, env(safe-area-inset-top)) + 64px);
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+  padding: 12px 16px;
+  border-radius: 14px;
+  background: rgb(14 18 24 / 0.92);
+  font-size: 14px;
+  animation: toast-in 0.2s ease;
+}
+
+.request-card div {
+  display: flex;
+  gap: 8px;
+}
+
+.request-card .accept {
+  background: #8fe0a8;
+  color: #0b0f14;
+  border: 0;
+}
+
+.demo-note {
+  margin: 8px 0 0;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgb(124 196 255 / 0.12);
+  font-size: 12px;
+}

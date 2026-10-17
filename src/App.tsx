@@ -15,6 +15,7 @@ import { PlacePanel } from './ui/menus/PlacePanel';
 import { ProfileSetup } from './ui/menus/ProfileSetup';
 import { ChatBox } from './ui/social/ChatBox';
 import { EmoteMenu } from './ui/social/EmoteMenu';
+import { SocialUi } from './ui/social/InteractPanel';
 import { PlayerList } from './ui/social/PlayerList';
 import { LoadingScreen } from './ui/menus/LoadingScreen';
 
@@ -46,6 +47,7 @@ export default function App() {
       {!freecam && <ChatBox />}
       <PlayerList />
       {!freecam && <EmoteMenu />}
+      {!freecam && <SocialUi />}
       <ProfileSetup />
       <LoadingScreen />
       {showTouch && !freecam && <TouchControls />}

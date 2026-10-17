@@ -16,6 +16,8 @@ import { useGame } from '../store/game';
 import { bmiOf, movementFactors, useLife } from '../store/life';
 import { useNav } from '../store/nav';
 import { useNet } from '../store/net';
+import { useSocial } from '../store/social';
+import { remoteSnapshots } from '../net/client';
 import { vehicleState } from '../vehicles/vehicleState';
 import { streamCollidersAround } from '../world/colliderStreaming';
 import { consumePress, input, readMove } from '../systems/input';
@@ -207,6 +209,8 @@ export function Player() {
           nav: useNav,
           net: useNet,
           playEmote,
+          social: useSocial,
+          remote: remoteSnapshots,
         },
       });
     }
@@ -272,6 +276,15 @@ export function Player() {
       const d = angleDelta(m.rotation.y, target);
       m.rotation.y += THREE.MathUtils.clamp(d, -step, step);
     }
+    // Face a partner during two-player emotes.
+    const face = playerState.faceToward;
+    if (m && face && flat < 0.3 && visual.current) {
+      const p = visual.current.getWorldPosition(new THREE.Vector3());
+      const target = Math.atan2(face.x - p.x, face.z - p.z);
+      const step = PLAYER.turnSpeed * dt;
+      m.rotation.y += THREE.MathUtils.clamp(angleDelta(m.rotation.y, target), -step, step);
+    }
+    if (flat > 0.3) playerState.faceToward = null;
     if (m) playerState.yaw = m.rotation.y;
   });
 

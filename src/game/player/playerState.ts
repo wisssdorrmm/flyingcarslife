@@ -25,6 +25,8 @@ export const playerState = {
   anim: 'idle' as 'idle' | 'walk' | 'run' | 'sprint' | 'jump' | 'fall',
   /** Emote in progress (start = performance.now() ms); cleared when it ends or you move. */
   emote: null as { name: EmoteName; start: number } | null,
+  /** While set (and standing still), the character turns to face this world point. */
+  faceToward: null as { x: number; z: number } | null,
 };
 
 /** Starts an emote on the local player (others see it via the next network update). */

@@ -190,6 +190,7 @@ export const KEYMAP = {
   reload: ['KeyR'],
   phone: ['KeyP'],
   map: ['KeyM'],
+  social: ['KeyX'],
 } as const;
 
 export const INPUT = {
@@ -299,6 +300,27 @@ export const NET = {
   timeout: 8,
   /** Name tags show within this range (m). */
   nameTagRange: 60,
+  /** Other players beyond this range (m) aren't drawn or animated. */
+  drawRange: 150,
   chat: { maxLength: 140, minIntervalMs: 1000, bubbleSeconds: 6, historySize: 60 },
   voice: { range: 25, maxPeers: 6 },
+  /** How close (m) another player must be to interact (X). */
+  interactRange: 4,
+  /** Unanswered requests expire after this many seconds. */
+  requestTimeout: 20,
+} as const;
+
+/** Simulated players for trying the social features before real players exist. */
+export const DEMO_PLAYERS = {
+  /** Count when playing locally (no Supabase); `?bots=N` overrides, 0 turns them off. */
+  localCount: 24,
+  /** Count when online with real players (off by default). */
+  onlineCount: 0,
+  walkSpeed: [1.25, 1.6] as [number, number],
+  jogSpeed: 3.4,
+  /** Demo players chat only when you're within this range (m). */
+  chatRange: 35,
+  /** Seconds between unprompted chat lines from the crowd. */
+  chatEvery: 22,
+  acceptChance: 0.85,
 } as const;

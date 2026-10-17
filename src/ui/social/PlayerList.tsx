@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import * as THREE from 'three';
 import { remoteSnapshots } from '../../game/net/client';
+import { isDemo } from '../../game/net/demoRoster';
 import { currentPose } from '../../game/store/nav';
 import { useNet } from '../../game/store/net';
 import { useLife } from '../../game/store/life';
+import { useSocial } from '../../game/store/social';
 import { formatDistance } from '../map/format';
 
 const tmp = new THREE.Vector2();
@@ -17,6 +19,7 @@ export function PlayerList() {
   const blocked = useNet((s) => s.blocked);
   const reported = useNet((s) => s.reported);
   const profile = useNet((s) => s.profile);
+  const friends = useSocial((s) => s.friends);
   const [, tick] = useState(0);
 
   useEffect(() => {
@@ -65,6 +68,12 @@ export function PlayerList() {
             ×
           </button>
         </header>
+        {players.some((p) => isDemo(p.id)) && (
+          <p className="demo-note">
+            Players marked <b>demo</b> are simulated so you can try meeting people. They switch off
+            when real online play is connected.
+          </p>
+        )}
         {players.length === 0 ? (
           <p className="empty">
             Nobody else is here yet. Open the game in another tab to test, or invite a friend.
@@ -77,7 +86,10 @@ export function PlayerList() {
                 <li key={p.id} className={blocked.has(p.id) ? 'blocked' : ''}>
                   <span className="dot" style={{ background: p.color }} />
                   <span className="who">
-                    <strong>{p.name}</strong>
+                    <strong>
+                      {friends.some((f) => f.id === p.id.split(':')[0]) ? '★ ' : ''}
+                      {p.name}
+                    </strong>
                     <em>
                       {p.title}
                       {d !== null ? ` · ${formatDistance(d)} away` : ''}

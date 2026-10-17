@@ -4,8 +4,10 @@ import { Stats } from '@react-three/drei';
 import { Physics, RigidBody, useRapier, type RapierRigidBody } from '@react-three/rapier';
 import * as THREE from 'three';
 import { PHYSICS, WORLD_LIGHTING } from './config';
+import { DemoPlayers } from './net/DemoPlayers';
 import { NetSystem } from './net/NetSystem';
 import { RemotePlayers } from './net/RemotePlayers';
+import { SocialSystem } from './net/SocialSystem';
 import { PlaceInteractions } from './places/PlaceInteractions';
 import { PlaceSigns } from './places/PlaceSigns';
 import { Player } from './player/Player';
@@ -59,13 +61,12 @@ export default function Game() {
         if (debug) Object.assign(window, { __scene: scene, __gl: gl });
       }}
     >
-      <fog
-        attach="fog"
-        args={[WORLD_LIGHTING.fogColor, WORLD_LIGHTING.fogNear, WORLD_LIGHTING.fogFar]}
-      />
+      <fogExp2 attach="fog" args={[WORLD_LIGHTING.fogColor, WORLD_LIGHTING.fogDensity]} />
       {freecam ? <DebugCamera /> : <DesktopInput />}
       <LifeSystem />
       {!freecam && <NetSystem />}
+      {!freecam && <SocialSystem />}
+      {!freecam && <DemoPlayers />}
       {!freecam && <PlaceInteractions />}
 
       <Suspense fallback={null}>

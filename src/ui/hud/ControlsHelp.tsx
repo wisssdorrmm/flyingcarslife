@@ -51,7 +51,7 @@ export function ControlsHelp({ freecam }: { freecam: boolean }) {
           'Click the game to look with the mouse · Esc to release',
           'W A S D: move · Shift: sprint · Alt: walk',
           'Space: jump · E: enter · M: map',
-          'T: chat · Tab: players · G: emotes',
+          'T: chat · Tab: players · G: emotes · X: meet someone',
         ];
   }
 

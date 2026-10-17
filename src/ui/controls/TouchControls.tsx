@@ -3,6 +3,7 @@ import { INPUT } from '../../game/config';
 import { useGame } from '../../game/store/game';
 import { useNav } from '../../game/store/nav';
 import { useNet } from '../../game/store/net';
+import { useSocial } from '../../game/store/social';
 import { addLook, input, pressAction, releaseAction } from '../../game/systems/input';
 
 const JOYSTICK_RADIUS = 56;
@@ -24,6 +25,7 @@ export function TouchControls() {
   const [sprint, setSprint] = useState(false);
   const mode = useGame((s) => s.mode);
   const prompt = useGame((s) => s.prompt);
+  const socialTarget = useSocial((s) => s.target);
   const lookId = useRef<number | null>(null);
   const lookLast = useRef({ x: 0, y: 0 });
   const stickRef = useRef<Stick | null>(null);
@@ -156,6 +158,17 @@ export function TouchControls() {
             {prompt === 'drive' && (
               <button className="touch-btn accent" {...hold('interact')}>
                 Drive
+              </button>
+            )}
+            {socialTarget && !prompt && (
+              <button
+                className="touch-btn accent"
+                onPointerDown={(e) => {
+                  e.stopPropagation();
+                  useSocial.getState().setPanelOpen(true);
+                }}
+              >
+                Meet
               </button>
             )}
             {prompt?.startsWith('place:') && (

@@ -1,6 +1,7 @@
 import { NET } from '../config';
 import { supabase } from '../../lib/supabase';
 import { useNet } from '../store/net';
+import { demoRoster } from './demoRoster';
 import { LocalTransport } from './localTransport';
 import { cleanText } from './moderation';
 import { SupabaseTransport } from './supabaseTransport';
@@ -59,9 +60,9 @@ export async function startNet(saved: PlayerProfile): Promise<void> {
     onStatus: (status, detail) => useNet.getState().setStatus(status, detail),
     onPresence: (players) => {
       const others = players.filter((p) => p.id !== profile.id);
-      useNet.getState().setPlayers(others);
+      useNet.getState().setPlayers([...others, ...demoRoster.profiles]);
       for (const id of [...remoteSnapshots.keys()]) {
-        if (!others.some((p) => p.id === id)) remoteSnapshots.delete(id);
+        if (!others.some((p) => p.id === id) && !demoRoster.ids.has(id)) remoteSnapshots.delete(id);
       }
     },
     onState: (s) => {
@@ -118,6 +119,7 @@ export function sendChat(text: string): string | null {
   };
   transport.sendChat(m);
   useNet.getState().addChat(m);
+  demoRoster.onChat?.(m.text);
   chatBubbles.set(profile.id, { text: m.text, at: performance.now() });
   return null;
 }
@@ -125,5 +127,19 @@ export function sendChat(text: string): string | null {
 /** Sends a direct message to one player (from = this session). */
 export function sendDirect(m: Omit<DirectMessage, 'from'>): void {
   const me = useNet.getState().profile;
-  if (me) transport?.sendDirect({ ...m, from: me.id });
+  if (!me) return;
+  // Demo players live in this browser; answer them locally.
+  if (demoRoster.ids.has(m.to)) demoRoster.onDirect?.({ ...m, from: me.id });
+  else transport?.sendDirect({ ...m, from: me.id });
+}
+
+/** Delivers a message as if it came over the network (used by demo players). */
+export function deliverLocal(m: DirectMessage): void {
+  directListeners.forEach((fn) => fn(m));
+}
+
+/** Shows a chat line from someone (used by demo players). */
+export function receiveChat(m: ChatMessage): void {
+  useNet.getState().addChat(m);
+  chatBubbles.set(m.from, { text: m.text, at: performance.now() });
 }

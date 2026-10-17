@@ -100,6 +100,12 @@ function RemotePlayer({ profile }: { profile: PlayerProfile }) {
     const x = a.x + (b.x - a.x) * k;
     const y = a.y + (b.y - a.y) * k;
     const z = a.z + (b.z - a.z) * k;
+    // Far-away players aren't drawn or animated at all.
+    camera.getWorldPosition(camPos);
+    if (Math.hypot(camPos.x - x, camPos.z - z) > NET.drawRange) {
+      g.visible = false;
+      return;
+    }
 
     // Driving: show their car (built once per paint), hide the person.
     const carSnap = b.car ?? a.car;
