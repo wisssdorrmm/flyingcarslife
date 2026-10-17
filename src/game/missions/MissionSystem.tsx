@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useCity } from '../city/cityData';
+import { CarFire } from '../hazards/CarFire';
 import { PoliceSystem } from '../police/PoliceSystem';
 import { pursuit } from '../police/pursuit';
 import { useSettings } from '../store/settings';
@@ -26,6 +27,7 @@ export function MissionSystem() {
       <MissionRunner />
       <MissionWorld />
       <PoliceFire />
+      <CarFire />
     </>
   );
 }

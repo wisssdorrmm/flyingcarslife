@@ -53,7 +53,21 @@ function Objective({ a }: { a: ActiveMission }) {
           {a.stage + 1}/{a.def.stages.length}
         </span>
       </div>
-      <div className="ms-obj-text">{a.objective}</div>
+      <div className="ms-obj-main">
+        {a.target && (
+          <span className="ms-dir">
+            <svg viewBox="0 0 24 24" style={{ transform: `rotate(${a.target.angle}rad)` }}>
+              <path d="M12 2 L20 20 L12 15 L4 20 Z" fill="currentColor" />
+            </svg>
+            <small>
+              {a.target.dist < 1000
+                ? `${Math.round(a.target.dist)} m`
+                : `${(a.target.dist / 1000).toFixed(1)} km`}
+            </small>
+          </span>
+        )}
+        <div className="ms-obj-text">{a.objective}</div>
+      </div>
       {(a.timer !== null || a.detail) && (
         <div className="ms-obj-row">
           {a.detail && <span className="ms-obj-detail">{a.detail}</span>}

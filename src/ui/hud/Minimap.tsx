@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { drawMissionPins } from '../../game/missions/pins';
 import { useCity } from '../../game/city/cityData';
 import { currentPose, useNav } from '../../game/store/nav';
 import { usePlayerCar } from '../../game/store/playerCar';
@@ -84,6 +85,7 @@ export function Minimap({ size = SIZE }: { size?: number }) {
         ctx.fill();
         ctx.stroke();
       }
+      drawMissionPins(ctx, sx, sy, { clamp: r });
       if (nav.waypoint) {
         // Clamp the pin to the rim when the destination is off the minimap.
         let wx = sx(nav.waypoint.x);

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { useRapier } from '@react-three/rapier';
 import * as THREE from 'three';
-import { MISSIONS } from '../config';
+import { MISSIONS, POLICE } from '../config';
 import { lineOfSight } from '../police/sight';
 import { useUi } from '../store/ui';
 import { vehicleState } from '../vehicles/vehicleState';
@@ -151,7 +151,9 @@ export function PoliceFire() {
     if (useUi.getState().menuOpen) return;
     const dt = Math.min(rawDt, 0.1);
     const car = vehicleState.active;
-    const fire = missionRuntime.fire;
+    // Missions set their own fire; otherwise police shoot from 2 stars (CLAUDE.md §6.3).
+    const stars = policeLink.api?.stars() ?? 0;
+    const fire = missionRuntime.fire ?? (stars > 0 ? (POLICE.fireByStars[stars] ?? null) : null);
     const F = MISSIONS.fire;
 
     // Shooting.
@@ -198,6 +200,8 @@ export function PoliceFire() {
           tmp.dir.subVectors(tmp.muzzle, camera.position).normalize();
           sfx.shot(d, tmp.dir.dot(tmp.right));
           if (hit) {
+            // Bullets dent the car; in a mission they also cost armor.
+            car.hitBy?.(tmp.aim, POLICE.damagePerHit);
             missionRuntime.onHit?.(F.damagePerHit);
             burst(tmp.aim, 10, 6);
           } else {
