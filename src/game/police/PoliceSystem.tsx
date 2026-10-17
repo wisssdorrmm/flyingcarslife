@@ -10,6 +10,8 @@ import { useUi } from '../store/ui';
 import { toast } from '../store/toasts';
 import { trafficRef, type Agent } from '../traffic/trafficSim';
 import { carContactHooks } from '../vehicles/contacts';
+import { hijackHooks } from '../vehicles/hijackState';
+import { usePlayerCar } from '../store/playerCar';
 import { vehicleState } from '../vehicles/vehicleState';
 import { PoliceChaser } from './PoliceChaser';
 import { PoliceHeli } from './PoliceHeli';
@@ -121,11 +123,21 @@ export function PoliceSystem() {
         policeNear(tmp.car.x, tmp.car.z, patrols.current),
       );
     };
+    const onHijack = (at: { x: number; z: number }) => {
+      const cop = usePlayerCar.getState().car?.model === 'police';
+      pursuit.offense(
+        cop ? 'policeCarTheft' : 'carTheft',
+        cop ? 'Stole a police car' : 'Car theft',
+        cop || policeNear(at.x, at.z, patrols.current),
+      );
+    };
     carContactHooks.add(onContact);
     pedHitHooks.add(onPed);
+    hijackHooks.add(onHijack);
     return () => {
       carContactHooks.delete(onContact);
       pedHitHooks.delete(onPed);
+      hijackHooks.delete(onHijack);
     };
   }, [tmp]);
 

@@ -20,5 +20,7 @@ export const vehicleState = {
     flightPhase?: string;
     /** Moves the car (stopped, on its wheels) — used by debug test scenes. */
     teleport?: (x: number, y: number, z: number, heading: number) => void;
+    /** A bullet hit (police gunfire): dents the body at a world point and adds damage (0–100). */
+    hitBy?: (point: THREE.Vector3, damage: number) => void;
   },
 };

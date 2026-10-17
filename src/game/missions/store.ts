@@ -32,6 +32,8 @@ export interface ActiveMission {
   timerMax: number | null;
   /** Secondary label, e.g. "2/5" or "Plane departs in". */
   detail: string | null;
+  /** Where to go: angle relative to the car's heading (rad, + = right) and distance (m). */
+  target: { angle: number; dist: number } | null;
   /** 0–1 progress of a hold/wait action (hijacking, waiting for the crew). */
   hold: number | null;
   armor: number;
@@ -96,6 +98,7 @@ function fresh(def: MissionDef, status: MissionStatus): ActiveMission {
     timer: null,
     timerMax: null,
     detail: null,
+    target: null,
     hold: null,
     armor: def.armor,
     armorMax: def.armor,

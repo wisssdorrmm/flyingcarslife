@@ -662,7 +662,7 @@ export const PHONE_CAM = {
 /** Police: wanted stars, pursuit, busted and evading (CLAUDE.md §6.3 and §6.2 point 5). */
 export const POLICE = {
   /** Stars an offense brings when police see it (a cruiser or patrol car within sightRange). */
-  offenses: { ramPolice: 2, hitPedestrian: 2, crash: 1 },
+  offenses: { ramPolice: 2, hitPedestrian: 2, crash: 1, carTheft: 1, policeCarTheft: 3 },
   /** Hitting a police car this hard (N·s) is ramming; hitting traffic this hard is reckless. */
   ramImpulse: 3500,
   crashImpulse: 9000,
@@ -694,6 +694,13 @@ export const POLICE = {
   wreckedSeconds: 2.5,
   /** Helicopter from this many stars: height above you (m), top speed (m/s). */
   heli: { fromStars: 4, height: 30, speed: 45, sightRange: 160 },
+  /**
+   * Police shoot at you from 2 stars (e.g. after hitting a pedestrian), harder as stars rise:
+   * shots per second per unit and hit chance at 10 m, by star level. Missions can override.
+   */
+  fireByStars: [null, null, { rate: 0.35, accuracy: 0.14 }, { rate: 0.5, accuracy: 0.18 }, { rate: 0.7, accuracy: 0.22 }, { rate: 0.9, accuracy: 0.26 }] as const,
+  /** Car damage (0–100) per bullet hit outside missions. */
+  damagePerHit: 4,
   /** Patrol cars in traffic when you're not wanted (they're the witnesses), by tier. */
   patrols: { low: 1, medium: 2, high: 2, ultra: 3 },
 } as const;
@@ -759,4 +766,15 @@ export const MISSIONS = {
   rating: { timeLeft: 0.35, armorLeft: 0.6 },
   /** When the mission has no police system to escape from, "lose the police" lasts this long (s). */
   fallbackEscapeSeconds: 25,
+} as const;
+
+/** A wrecked car catches fire and explodes (src/game/hazards). */
+export const CAR_FIRE = {
+  /** Damage (0–100) at which the car catches fire: 80 = 20% health left. */
+  atDamage: 80,
+  /** Seconds from catching fire to exploding: get out (switch cars) before then. */
+  fuse: 6,
+  /** Dying in the blast: hospital bill (flat + share of cash). */
+  hospitalFee: 300,
+  hospitalCashShare: 0.1,
 } as const;

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { drawMissionPins } from '../../game/missions/pins';
 import { useCity } from '../../game/city/cityData';
 import { DISTRICTS, districtAt, LANDMARKS, type Landmark } from '../../game/city/geo';
 import { currentPose, useNav } from '../../game/store/nav';
@@ -166,6 +167,8 @@ export function MapScreen() {
           ctx.fillText(p.name, x, y + r + 10);
         }
       }
+
+      drawMissionPins(ctx, sx, sy, { labels: true });
 
       // Waypoint pin.
       const wp = useNav.getState().waypoint;
