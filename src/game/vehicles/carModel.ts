@@ -12,6 +12,8 @@ export const CAR_MODEL_LOD = 'car_concept_lod';
 const BODY_PAINT = /^Paint 1/;
 /** The source glass uses transmission (an extra full-scene render pass); swap it for tinted glass. */
 const GLASS = /^Glass$/;
+/** Rim materials, tinted by the garage wheel choice. */
+const RIM = /^Rim/;
 
 /** Source node names for the moving parts. Wheels are ordered FL, FR, RL, RR. */
 const WHEEL_NODES = ['WheelFrontL', 'WheelFrontR', 'WheelRearL', 'WheelRearR'] as const;
@@ -19,6 +21,8 @@ const DRIVER_DOOR_NODE = 'BodyDoorLColor1';
 
 export interface CarLook {
   paint: THREE.ColorRepresentation;
+  /** Rim color ('' = the model's own). */
+  wheels?: string;
 }
 
 const sharedGlass = new THREE.MeshPhysicalMaterial({
@@ -40,6 +44,10 @@ function materialRemapper(look: CarLook): (m: THREE.Material) => THREE.Material 
     let out = material;
     if (GLASS.test(material.name)) {
       out = sharedGlass;
+    } else if (look.wheels && RIM.test(material.name)) {
+      const rim = (material as THREE.MeshStandardMaterial).clone();
+      rim.color.set(look.wheels);
+      out = rim;
     } else if (BODY_PAINT.test(material.name)) {
       const paint = (material as THREE.MeshPhysicalMaterial).clone();
       paint.color.set(look.paint);
@@ -211,7 +219,11 @@ export function buildSimpleCarRig(look: CarLook, police = false): CarRig {
     );
   }
   const tire = new THREE.MeshStandardMaterial({ color: '#16171a', roughness: 0.8 });
-  const rim = new THREE.MeshStandardMaterial({ color: '#b9bec4', roughness: 0.35, metalness: 0.8 });
+  const rim = new THREE.MeshStandardMaterial({
+    color: look.wheels || '#b9bec4',
+    roughness: 0.35,
+    metalness: 0.8,
+  });
   const wheels: CarWheel[] = [];
   for (const [x, z, front] of [
     [0.78, 1.35, true],

@@ -9,6 +9,7 @@
     "types": ["vite/client"],
     "allowImportingTsExtensions": false,
     "isolatedModules": true,
+    "resolveJsonModule": true,
     "moduleDetection": "force",
     "noEmit": true,
     "skipLibCheck": true,

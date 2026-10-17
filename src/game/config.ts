@@ -505,6 +505,26 @@ export const GARAGE = {
   wheelPrice: 600,
 } as const;
 
+/** Billboards (src/game/ads, slots booked in src/data/billboards.json). */
+export const BILLBOARDS = {
+  /** One roadside billboard roughly every this many meters of main road. */
+  spacing: 220,
+  /** Board size (m) and height of its bottom edge above the sidewalk. */
+  width: 8,
+  height: 3.6,
+  lift: 5.5,
+  /** Empty slots rotate the house creatives this often (s). */
+  rotateSeconds: 8,
+  /** House creatives shown in empty slots. */
+  house: [
+    { name: 'BIZZSMS', tagline: 'Bulk SMS that just works', bg: '#1d3fbf', fg: '#ffffff', accent: '#ffd166' },
+    { name: 'Veyra', tagline: 'Style that moves with you', bg: '#111317', fg: '#f5e9d7', accent: '#c9a227' },
+    { name: 'Nariesa', tagline: 'Naturally radiant skincare', bg: '#f6d6e0', fg: '#4a1d33', accent: '#c2457a' },
+    { name: 'Bejite', tagline: 'Fresh finds, every day', bg: '#16a34a', fg: '#ffffff', accent: '#fde047' },
+  ],
+  advertise: 'wisdomudoudo24@gmail.com',
+} as const;
+
 export const CHASE_CAMERA = {
   distance: 6.2,
   height: 1.9,

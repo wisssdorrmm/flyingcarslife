@@ -41,6 +41,11 @@ interface Props extends CarLook {
   canFly?: boolean;
   /** Speed (m/s) the car starts with, along its heading (taking over a moving car). */
   initialSpeed?: number;
+  /** Engine strength (garage car stats), and flight time per launch for flying cars (s). */
+  power?: number;
+  flightSeconds?: number;
+  /** Rim color ('' = stock). */
+  wheels?: string;
 }
 
 const HUD_INTERVAL = 0.1;
@@ -102,14 +107,17 @@ export function DrivableCar({
   model = 'ev',
   canFly = true,
   initialSpeed = 0,
+  power: carPower = 1,
+  flightSeconds,
+  wheels = '',
 }: Props) {
   const gltf = useGLTF(modelUrl(CAR_MODEL), false, true);
   const rig = useMemo(
     () =>
       model === 'ev'
-        ? buildDrivableCar(gltf.scene, { paint })
-        : buildSimpleCarRig({ paint }, model === 'police'),
-    [gltf, paint, model],
+        ? buildDrivableCar(gltf.scene, { paint, wheels })
+        : buildSimpleCarRig({ paint, wheels }, model === 'police'),
+    [gltf, paint, model, wheels],
   );
   const deformer = useMemo(() => new CarDeformer(rig.bodyMeshes), [rig]);
   const chassis = useRef<RapierRigidBody>(null);
@@ -163,6 +171,9 @@ export function DrivableCar({
 
   const arcade = useMemo(() => new ArcadeCar(), []);
   const flight = useMemo(() => new FlightController(), []);
+  useEffect(() => {
+    if (flightSeconds) flight.limit = flightSeconds;
+  }, [flight, flightSeconds]);
   // Flying cars look like normal cars: no flames, just a faint heat shimmer under the car in the air.
   const shimmer = useMemo(() => {
     const c = document.createElement('canvas');
@@ -275,7 +286,9 @@ export function DrivableCar({
 
     const speed = arcade.telemetry.forward;
     const power =
-      (1 - (s.damage / 100) * (1 - VEHICLE.damagedEngineFactor)) * (s.battery > 0 ? 1 : 0);
+      carPower *
+      (1 - (s.damage / 100) * (1 - VEHICLE.damagedEngineFactor)) *
+      (s.battery > 0 ? 1 : 0);
 
     // Front wheel angle (visual + a little real steering). Damage is cosmetic: no pull to one side.
     const t = THREE.MathUtils.clamp(Math.abs(speed) / VEHICLE.highSpeedSteerAt, 0, 1);
@@ -376,7 +389,10 @@ export function DrivableCar({
         const t = rb.translation();
         const r = rb.rotation();
         const inv = new THREE.Quaternion(r.x, r.y, r.z, r.w).invert();
-        const local = point.clone().sub(new THREE.Vector3(t.x, t.y, t.z)).applyQuaternion(inv);
+        const local = point
+          .clone()
+          .sub(new THREE.Vector3(t.x, t.y, t.z))
+          .applyQuaternion(inv);
         const dir = local.clone().setY(0).normalize().negate();
         if (local.y > 0.15) deformer.hit(local, dir, 0.25);
         sim.current.damage = Math.min(100, sim.current.damage + damage);

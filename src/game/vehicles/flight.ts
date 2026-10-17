@@ -87,6 +87,8 @@ export class FlightController {
   private launches = 0;
   /** Seconds since the launch (each flight is limited to FLYING.flightSeconds). */
   private airTime = 0;
+  /** Flight time per launch for this car (s). */
+  limit: number = FLYING.flightSeconds;
   /** Rear axle in the car's frame (pivot for the nose-up) and its world position. */
   private axleLocal = new THREE.Vector3(0, 0.36, -1.35);
   private axleWorld = new THREE.Vector3();
@@ -101,9 +103,7 @@ export class FlightController {
 
   /** Flight time left (s); 0 once the car has to come down. */
   get timeLeft(): number {
-    return this.mode === 'ground'
-      ? FLYING.flightSeconds
-      : Math.max(0, FLYING.flightSeconds - this.airTime);
+    return this.mode === 'ground' ? this.limit : Math.max(0, this.limit - this.airTime);
   }
 
   /** Launch phases (no control, no crash damage). */
@@ -241,7 +241,7 @@ export class FlightController {
     } else {
       const dist = ground();
       // Out of flight time (or battery): come down.
-      const timeUp = this.airTime >= FLYING.flightSeconds;
+      const timeUp = this.airTime >= this.limit;
       if (this.mode === 'fly' && (battery <= 0 || timeUp)) {
         this.mode = 'glide';
         if (timeUp) for (const hook of timeUpHooks) hook();
