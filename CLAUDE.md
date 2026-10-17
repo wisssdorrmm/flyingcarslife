@@ -131,13 +131,40 @@ public/
 - Damage is cosmetic/light; cars never get stuck (auto-flip / reset key).
 
 ### 6.2 Rocket launch flying car (signature feature)
-- Flying cars look like normal cars on the ground.
-- Press **F** (or the mobile button) at any speed: the nose pitches up to ~82° in 0.4 s on the rear wheels, the car
-  rockets almost straight up (0 → 60 m/s in ~2 s), tumbling chaotically ~1.5 rotations for ~2 s, with a whoosh
-  and a dust burst.
-- Then it auto-stabilizes and the player flies: forward thrust, banking turns, climb **Shift**, descend **Ctrl**.
-- Battery drains while flying; land on roads or roofs; empty battery = slow, safe glide down.
-- Bystanders stop, look up and point.
+
+Reference: (A) a white car drives normally in traffic on a wide avenue near a bridge, police in the same traffic
+ignore it; it tilts nose-up and rockets straight up between downtown glass towers, flipping and spinning, until it
+is a tiny dot while traffic keeps driving. (B) A police car chases the car up a rooftop car park; the car flips
+nose-up to vertical and shoots into the sky tumbling; the police car drives to where it was and stops.
+
+1. **Ground mode (disguise):** flying cars look and drive exactly like normal cars — same handling, no glow, no
+   thrusters, no special sound. Police and NPCs treat them as normal cars.
+2. **Launch** (F / mobile "Launch"), at any speed including stopped:
+   - *Nose-up (0–0.4 s):* pivot on the rear axle to ~82° (standing on the rear wheels); keep 40% of forward speed.
+   - *Rocket climb + tumble (0.4–2.4 s):* thrust along world-up, ~0 → 60 m/s in ~2 s, slight forward drift in the
+     original direction. Chaotic tumble from a seeded random angular velocity (mostly roll/pitch, some yaw),
+     ~1.5 rotations. Loud whoosh/boom, ground dust ring + small debris, light heat shimmer. No big jet flames.
+   - *Stabilize (2.4–3.0 s):* angular velocity damps to zero, the car slerps level (wheels down), vertical speed
+     eases to a gentle climb. Full control after this; holding climb keeps rising ("becomes a dot").
+   - Drive the Rapier body with setLinvel/setAngvel during launch; wheel raycasts off in the air, back on landing.
+     Collisions stay on (hitting a building while tumbling bounces off, then it stabilizes).
+3. **Flight:** forward/back thrust, turns with automatic banking, climb (Shift/Space), descend (Ctrl/mobile).
+   Smooth, slightly floaty, faster than driving; max altitude ~400 m. Battery drains while airborne; HUD shows
+   altitude + battery. Camera pulls back and tilts up during the launch, then sits behind and slightly above.
+4. **Landing:** below ~6 m above any surface (road or roof) the car auto-levels and settles onto its wheels, then
+   returns to ground mode. Empty battery = slow safe glide down, then lands. No explosion.
+5. **Police + NPC reactions:** ground police can't follow into the air — they drive to the launch point and stop
+   (at a roof edge they brake at the edge). At 1–3 stars launching breaks pursuit; stars flash and fade after
+   ~10 s out of sight. At 4–5 stars a police helicopter follows. Launching while not wanted adds no stars.
+   Bystanders within ~40 m stop, look up and point; some hold up phones.
+6. **Debug teleports** (`?debug`): "Bridge launch" (wide avenue toward downtown towers, traffic + a police car
+   behind) and "Rooftop launch" (multi-level rooftop car park with ramps, white deck, pillars, glass barriers,
+   planters; a police car chases the player up).
+7. **Tuning** lives in `config.ts` → `flying: { noseUpDeg: 82, noseUpTime: 0.4, keepForwardVel: 0.4, climbAccel: 30,
+   climbMaxSpeed: 60, tumbleTime: 2.0, tumbleRotations: 1.5, stabilizeTime: 0.6, flightMaxSpeed: 70,
+   maxAltitude: 400, autoLandHeight: 6, batteryDrainPerSec: 0.8 }`.
+8. **Done when** it matches the clips filmed from the sidewalk, and after ~3 s the player can fly around and land
+   on a road or roof and drive away.
 
 ### 6.3 Police
 - Wanted stars 1–5 for reckless driving, crashes and hitting police.
@@ -204,7 +231,7 @@ public/
 4. ✅ **Traffic and pedestrians** — parked cars, AI traffic, buses, pedestrians.
 5. ✅ **HUD** per section 6.9. → *Stop and show the user.*
 6. **Police** per section 6.3.
-7. **Rocket launch flight** per section 6.2.
+7. **Rocket launch flight** per section 6.2 (moved ahead of police at the user's request).
 8. **Goals and garage** per sections 6.4–6.5.
 9. **Billboards** per section 6.8.
 10. **Phone performance** — budgets in section 10.
