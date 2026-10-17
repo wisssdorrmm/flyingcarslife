@@ -419,7 +419,12 @@ export function DrivableCar({
     }
     // Debug hook for automated handling checks.
     if (useSettings.getState().debug) {
-      Object.assign(window, { __drive: arcade.telemetry, __deform: deformer });
+      Object.assign(window, {
+        __drive: arcade.telemetry,
+        __deform: deformer,
+        __teleport: (x: number, y: number, z: number, h: number) =>
+          vehicleState.active?.teleport?.(x, y, z, h),
+      });
     }
     return () => {
       if (vehicleState.active?.id === id) vehicleState.active = null;

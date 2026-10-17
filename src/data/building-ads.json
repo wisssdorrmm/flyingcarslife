@@ -1,0 +1,54 @@
+[
+  {
+    "building_id": "",
+    "brand": "BIZZSMS",
+    "category": "Bulk SMS",
+    "tagline": "Bulk SMS that just works",
+    "description": "Send bulk SMS to thousands of customers in seconds: promotions, alerts, OTPs and reminders, with delivery reports and simple pricing.",
+    "website": "",
+    "contact": "wisdomudoudo24@gmail.com",
+    "logo": "",
+    "colors": { "bg": "#1d3fbf", "fg": "#ffffff", "accent": "#ffd166" },
+    "start_date": "2026-01-01",
+    "end_date": "2099-12-31"
+  },
+  {
+    "building_id": "",
+    "brand": "Veyra",
+    "category": "PLACEHOLDER: category",
+    "tagline": "Style that moves with you",
+    "description": "PLACEHOLDER: replace with what Veyra offers.",
+    "website": "",
+    "contact": "wisdomudoudo24@gmail.com",
+    "logo": "",
+    "colors": { "bg": "#111317", "fg": "#f5e9d7", "accent": "#c9a227" },
+    "start_date": "2026-01-01",
+    "end_date": "2099-12-31"
+  },
+  {
+    "building_id": "",
+    "brand": "Nariesa",
+    "category": "PLACEHOLDER: category",
+    "tagline": "Naturally radiant",
+    "description": "PLACEHOLDER: replace with what Nariesa offers.",
+    "website": "",
+    "contact": "wisdomudoudo24@gmail.com",
+    "logo": "",
+    "colors": { "bg": "#f6d6e0", "fg": "#4a1d33", "accent": "#c2457a" },
+    "start_date": "2026-01-01",
+    "end_date": "2099-12-31"
+  },
+  {
+    "building_id": "",
+    "brand": "Bejite",
+    "category": "PLACEHOLDER: category",
+    "tagline": "Fresh finds, every day",
+    "description": "PLACEHOLDER: replace with what Bejite offers.",
+    "website": "",
+    "contact": "wisdomudoudo24@gmail.com",
+    "logo": "",
+    "colors": { "bg": "#16a34a", "fg": "#ffffff", "accent": "#fde047" },
+    "start_date": "2026-01-01",
+    "end_date": "2099-12-31"
+  }
+]

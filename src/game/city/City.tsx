@@ -15,6 +15,7 @@ import { Traffic } from '../traffic/Traffic';
 import { TireFx } from '../vehicles/TireFx';
 import { loadCity, preloadAround } from './cityData';
 import { Billboards } from '../ads/Billboards';
+import { BuildingAds } from '../ads/BuildingAds';
 import { ShaderWarmup } from '../world/ShaderWarmup';
 import { BayBridge } from './BayBridge';
 import { CityTiles } from './CityTiles';
@@ -60,6 +61,7 @@ export function City() {
       <Water />
       <BayBridge />
       <Billboards city={city} />
+      <BuildingAds city={city} />
       <RooftopCarPark city={city} />
       {groundReady && chaser && (
         <PoliceChaser

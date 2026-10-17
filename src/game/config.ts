@@ -527,6 +527,18 @@ export const BILLBOARDS = {
   advertise: 'wisdomudoudo24@gmail.com',
 } as const;
 
+/** Advertiser-owned buildings (src/game/ads/BuildingAds.tsx, data in src/data/building-ads.json). */
+export const BUILDING_ADS = {
+  /** How many ad buildings are drawn at once (nearest first), by quality tier. */
+  visible: { low: 8, medium: 14, high: 22, ultra: 30 },
+  /** The details card shows for an owned building this close (m). */
+  cardRange: 60,
+  /** Facade banners start this high above the street (clear of shopfronts) (m). */
+  bannerLift: 4.5,
+  maxBannerWidth: 38,
+  maxBannerHeight: 20,
+} as const;
+
 export const CHASE_CAMERA = {
   distance: 6.2,
   height: 1.9,

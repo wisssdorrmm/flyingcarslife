@@ -697,3 +697,71 @@
   outline: 2px solid var(--hud-teal);
   outline-offset: 2px;
 }
+
+/* Advertiser details card */
+.hud-bc {
+  flex-wrap: wrap;
+  justify-content: center;
+  max-width: min(520px, calc(100vw - 24px));
+}
+.hud-adcard {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: min(360px, calc(100vw - 40px));
+  padding: 10px 14px 12px;
+  pointer-events: auto;
+  border-width: 1px 1px 1px 4px;
+  animation: hud-in 0.2s ease;
+}
+.hud-adcard-kicker {
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  color: var(--hud-dim);
+  font-weight: 700;
+  padding-right: 22px;
+}
+.hud-adcard strong {
+  font-size: 20px;
+  font-weight: 800;
+}
+.hud-adcard-cat {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.hud-adcard em {
+  font-size: 13px;
+  font-style: normal;
+  color: var(--hud-text);
+}
+.hud-adcard p {
+  margin: 2px 0 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--hud-dim);
+}
+.hud-adcard-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 4px;
+}
+.hud-adcard a {
+  color: var(--hud-teal);
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+}
+.hud-adcard-x {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  color: var(--hud-dim);
+  background: none;
+  border: 0;
+  font-size: 18px;
+  cursor: pointer;
+}

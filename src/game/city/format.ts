@@ -98,6 +98,25 @@ export interface HeightGrid {
   data: string;
 }
 
+/** A building whose main street wall can carry an advertiser's branding. */
+export interface AdBuilding {
+  /** OSM id (stable across rebuilds): the key advertisers book. */
+  id: string;
+  /** OSM name or address, when mapped. */
+  name: string;
+  /** Street wall from a to b (world x/z), its outward normal, and its height range (m). */
+  ax: number;
+  az: number;
+  bx: number;
+  bz: number;
+  nx: number;
+  nz: number;
+  base: number;
+  top: number;
+  /** Street the wall faces. */
+  street: string;
+}
+
 export interface TileEntry {
   ix: number;
   iz: number;
@@ -142,6 +161,8 @@ export interface CityIndex {
   edges: RoadEdge[];
   /** Nodes with traffic signals. */
   signals: number[];
+  /** Prominent buildings that can be owned by an advertiser (facade + rooftop ads). */
+  adBuildings: AdBuilding[];
   /**
    * Coarse drivable-surface height grid for the whole area (GPS ribbons, map, far traffic).
    * `data` is base64 of little-endian Int16 decimeters.

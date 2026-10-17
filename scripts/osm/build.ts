@@ -13,6 +13,7 @@ import {
   TILE_SIZE,
   tileKey,
   type CityIndex,
+  type AdBuilding,
   type CityMap,
   type HeightGrid,
   type RoadEdge,
@@ -27,6 +28,7 @@ import {
   offset,
   rightOf,
   SegmentIndex,
+  signedArea as signedAreaOf,
   union,
   type Poly,
   type Pt,
@@ -132,6 +134,9 @@ function tileHeightGrid(
   }
   return { x0, z0, step, nx: n, nz: n, data: Buffer.from(data.buffer).toString('base64') };
 }
+
+const r1 = (n: number) => Math.round(n * 10) / 10;
+const r3 = (n: number) => Math.round(n * 1000) / 1000;
 
 const dm = (r: Ring) => r.flatMap(([x, z]) => [Math.round(x * 10), Math.round(z * 10)]);
 
@@ -332,6 +337,56 @@ async function main(): Promise<void> {
       hdata[k * hnx + i] = Math.round(height(hx0 + i * step, hz0 + k * step) * 10);
   }
 
+  // Ad buildings: tall, large buildings with a long wall facing a road, spread across the map.
+  const candidates: AdBuilding[] = [];
+  const scores = new Map<string, number>();
+  for (const b of buildings) {
+    if (b.height < 14) continue;
+    const ring = b.poly.outer;
+    const side = signedAreaOf(ring) > 0 ? 1 : -1;
+    let best: { a: Pt; c: Pt; n: Pt; len: number; road: Road } | null = null;
+    for (let i = 0; i < ring.length; i++) {
+      const a = ring[i]!;
+      const c = ring[(i + 1) % ring.length]!;
+      const len = Math.hypot(c[0] - a[0], c[1] - a[1]);
+      if (len < 11) continue;
+      const dx = (c[0] - a[0]) / len;
+      const dz = (c[1] - a[1]) / len;
+      const n: Pt = side > 0 ? [dz, -dx] : [-dz, dx];
+      const mid: Pt = [(a[0] + c[0]) / 2 + n[0] * 1.5, (a[1] + c[1]) / 2 + n[1] * 1.5];
+      const hit = roadIndex.nearest(mid, 26);
+      if (!hit || hit.d - hit.data.width / 2 > 9) continue;
+      if (!best || len > best.len) best = { a, c, n, len, road: hit.data };
+    }
+    if (!best) continue;
+    const gMin = Math.min(...ring.map(([x, z]) => height(x, z)));
+    const id = String(b.id);
+    candidates.push({
+      id,
+      name: b.name,
+      ax: r1(best.a[0]),
+      az: r1(best.a[1]),
+      bx: r1(best.c[0]),
+      bz: r1(best.c[1]),
+      nx: r3(best.n[0]),
+      nz: r3(best.n[1]),
+      base: r1(gMin),
+      top: r1(height(b.c[0], b.c[1]) + b.height),
+      street: best.road.name,
+    });
+    scores.set(id, b.height * best.len * (best.road.cls === 'major' ? 1.6 : best.road.cls === 'minor' ? 1.3 : 1));
+  }
+  candidates.sort((p, q) => scores.get(q.id)! - scores.get(p.id)!);
+  const adBuildings: AdBuilding[] = [];
+  for (const c of candidates) {
+    const cx = (c.ax + c.bx) / 2;
+    const cz = (c.az + c.bz) / 2;
+    if (adBuildings.some((o) => Math.hypot((o.ax + o.bx) / 2 - cx, (o.az + o.bz) / 2 - cz) < 110)) continue;
+    adBuildings.push(c);
+    if (adBuildings.length >= 80) break;
+  }
+  lap(`ad buildings: ${adBuildings.length}`);
+
   const index: CityIndex = {
     version: CITY_FORMAT_VERSION,
     tileSize: TILE_SIZE,
@@ -347,6 +402,7 @@ async function main(): Promise<void> {
     streets,
     nodes,
     edges,
+    adBuildings,
     signals: [...net.junctions.values()].filter((j) => j.signal).map((j) => nodeIndex.get(j.id)!),
     height: {
       x0: hx0,

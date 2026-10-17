@@ -121,6 +121,8 @@ export interface BuildingInput {
 
 export interface Building {
   id: number;
+  /** OSM name, or the street address when there's no name. */
+  name: string;
   poly: Poly;
   c: Pt;
   style: Style;
@@ -166,7 +168,9 @@ export function collectBuildings({ osm, height, terrain, roads }: BuildingInput)
       style = 'shop';
     else if (h <= 15 && a < 450) style = 'victorian';
     else style = 'apartment';
-    out.push({ id, poly: p, c, style, height: h });
+    const name =
+      tags.name ?? (tags['addr:housenumber'] && tags['addr:street'] ? `${tags['addr:housenumber']} ${tags['addr:street']}` : '');
+    out.push({ id, name, poly: p, c, style, height: h });
   }
   return out;
 }
