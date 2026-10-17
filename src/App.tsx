@@ -11,6 +11,7 @@ import { MapScreen } from './ui/map/MapScreen';
 import { Garage, GarageUnlocks } from './ui/menus/Garage';
 import { PauseMenu } from './ui/menus/PauseMenu';
 import { RaceMenu } from './ui/menus/RaceMenu';
+import { Diag } from './ui/menus/Diag';
 import { LoadError } from './ui/menus/LoadError';
 import { LoadingScreen } from './ui/menus/LoadingScreen';
 
@@ -41,6 +42,7 @@ export default function App() {
       <Garage />
       <GarageUnlocks />
       <LoadingScreen />
+      <Diag />
       {showTouch && !freecam && <TouchControls />}
       {debug && <DebugPanel />}
     </div>

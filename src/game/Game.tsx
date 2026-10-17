@@ -11,6 +11,7 @@ import { useUi } from './store/ui';
 import { DesktopInput } from './systems/DesktopInput';
 import { ChaseCamera } from './vehicles/ChaseCamera';
 import { DebugCamera } from './world/DebugCamera';
+import { watchContext } from './world/glWatch';
 import { PostFX } from './world/PostFX';
 import { SkyAndSun } from './world/SkyAndSun';
 
@@ -42,6 +43,7 @@ export default function Game() {
       }}
       camera={{ fov: 55, near: 0.1, far: 1500 }}
       onCreated={({ scene, gl }) => {
+        watchContext(gl.domElement, gl.getContext());
         // Debug hook for inspecting the scene from devtools / automated checks.
         if (debug) Object.assign(window, { __scene: scene, __gl: gl });
       }}
