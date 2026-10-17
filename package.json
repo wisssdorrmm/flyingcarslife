@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "preview": "vite preview",
+    "preview": "npm run build && wrangler dev",
     "typecheck": "tsc -b",
     "lint": "eslint .",
     "format": "prettier --write .",
@@ -18,7 +18,8 @@
     "assets:compress": "tsx scripts/compress-assets.ts",
     "check": "node scripts/browser-check.mjs",
     "city:fetch": "tsx scripts/osm/fetch.ts",
-    "city:build": "tsx scripts/osm/build.ts"
+    "city:build": "tsx scripts/osm/build.ts",
+    "deploy": "npm run build && npx wrangler deploy"
   },
   "dependencies": {
     "@react-three/drei": "^9.122.0",
@@ -35,6 +36,7 @@
     "zustand": "^5.0.15"
   },
   "devDependencies": {
+    "@cloudflare/vite-plugin": "^1.64.0",
     "@eslint/js": "^9.39.5",
     "@gltf-transform/core": "^4.5.1",
     "@gltf-transform/extensions": "^4.5.1",
@@ -60,6 +62,7 @@
     "tsx": "^4.23.15",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.71.2",
-    "vite": "^8.3.4"
+    "vite": "^8.3.4",
+    "wrangler": "^4.151.1"
   }
 }

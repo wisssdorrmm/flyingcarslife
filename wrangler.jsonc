@@ -1,0 +1,14 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  // Cloudflare Workers static assets: the built game in dist/ (npm run deploy).
+  "name": "flyingcarslife",
+  "compatibility_date": "2026-10-12",
+  "observability": {
+    "enabled": true
+  },
+  "assets": {
+    "directory": "./dist",
+    // Missing files must 404 (not fall back to index.html), or a missing city tile looks corrupt.
+    "not_found_handling": "404-page"
+  }
+}
