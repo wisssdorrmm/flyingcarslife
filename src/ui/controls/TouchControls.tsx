@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { INPUT } from '../../game/config';
 import { useGame } from '../../game/store/game';
 import { useNav } from '../../game/store/nav';
+import { useNet } from '../../game/store/net';
 import { addLook, input, pressAction, releaseAction } from '../../game/systems/input';
 
 const JOYSTICK_RADIUS = 56;
@@ -121,6 +122,15 @@ export function TouchControls() {
         }}
       >
         Map
+      </button>
+      <button
+        className="touch-btn players-btn"
+        onPointerDown={(e) => {
+          e.stopPropagation();
+          useNet.getState().setListOpen(true);
+        }}
+      >
+        Players
       </button>
       <div className="touch-buttons">
         {mode === 'driving' ? (

@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { ChatMessage, PlayerProfile } from '../net/types';
+import { input } from '../systems/input';
 
 export type NetStatus = 'idle' | 'connecting' | 'online' | 'offline';
 
@@ -56,7 +57,11 @@ export const useNet = create<NetState>()((set) => ({
   toggleMute: (id) => set((s) => ({ muted: toggled(s.muted, id) })),
   toggleBlock: (id) => set((s) => ({ blocked: toggled(s.blocked, id) })),
   report: (id) => set((s) => ({ reported: new Set(s.reported).add(id) })),
-  setTyping: (typing) => set({ typing }),
+  setTyping: (typing) => {
+    // Drop held movement keys so the player doesn't keep walking while typing.
+    if (typing) input.held.clear();
+    set({ typing });
+  },
   setListOpen: (listOpen) => set({ listOpen }),
   setVoiceEnabled: (voiceEnabled) => set({ voiceEnabled }),
 }));

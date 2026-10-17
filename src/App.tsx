@@ -13,6 +13,8 @@ import { Speedometer } from './ui/hud/Speedometer';
 import { StatusHud, Toasts } from './ui/hud/StatusHud';
 import { PlacePanel } from './ui/menus/PlacePanel';
 import { ProfileSetup } from './ui/menus/ProfileSetup';
+import { ChatBox } from './ui/social/ChatBox';
+import { PlayerList } from './ui/social/PlayerList';
 import { LoadingScreen } from './ui/menus/LoadingScreen';
 
 // The 3D engine is split out so the shell paints instantly while three/rapier download.
@@ -40,6 +42,8 @@ export default function App() {
       <Speedometer />
       <PlacePanel />
       <MapScreen />
+      {!freecam && <ChatBox />}
+      <PlayerList />
       <ProfileSetup />
       <LoadingScreen />
       {showTouch && !freecam && <TouchControls />}

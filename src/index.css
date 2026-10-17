@@ -977,3 +977,175 @@ kbd {
   min-height: 46px;
   font-size: 16px;
 }
+
+.chatbox {
+  position: absolute;
+  left: max(14px, env(safe-area-inset-left));
+  bottom: calc(max(14px, env(safe-area-inset-bottom)) + 200px);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: min(360px, calc(100vw - 28px));
+  font-size: 13px;
+}
+
+.chat-status {
+  font-size: 11px;
+  opacity: 0.6;
+}
+
+.chat-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chat-lines li {
+  align-self: flex-start;
+  max-width: 100%;
+  padding: 3px 9px;
+  border-radius: 8px;
+  background: rgb(10 14 20 / 0.6);
+  overflow-wrap: anywhere;
+}
+
+.chat-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chat-form input {
+  flex: 1;
+  min-width: 0;
+  min-height: 38px;
+  padding: 0 10px;
+  border: 1px solid rgb(255 255 255 / 0.2);
+  border-radius: 10px;
+  background: rgb(10 14 20 / 0.85);
+  color: inherit;
+  font: inherit;
+}
+
+.chat-form button,
+.chat-open {
+  min-height: 38px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 10px;
+  background: rgb(10 14 20 / 0.7);
+  color: inherit;
+  font:
+    600 12px system-ui,
+    sans-serif;
+}
+
+.chat-open {
+  align-self: flex-start;
+}
+
+.chat-error {
+  width: 100%;
+  color: #ff8a7a;
+  font-size: 11px;
+}
+
+.player-list {
+  width: min(560px, 100%);
+  max-height: min(640px, calc(100vh - 32px));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 16px 18px;
+  border-radius: 16px;
+  background: #11161d;
+}
+
+.player-list header {
+  display: flex;
+  justify-content: space-between;
+}
+
+.player-list h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.player-list header p,
+.player-list .empty {
+  margin: 4px 0 0;
+  font-size: 13px;
+  opacity: 0.7;
+}
+
+.player-list ul {
+  margin: 12px 0 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.player-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  border-top: 1px solid rgb(255 255 255 / 0.06);
+}
+
+.player-list li.blocked {
+  opacity: 0.5;
+}
+
+.player-list .dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.player-list .who {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  font-size: 13px;
+}
+
+.player-list .who em {
+  font-size: 11px;
+  font-style: normal;
+  opacity: 0.65;
+}
+
+.player-list li button {
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px solid rgb(255 255 255 / 0.16);
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  font:
+    600 11px system-ui,
+    sans-serif;
+}
+
+.players-btn {
+  position: absolute;
+  right: max(16px, env(safe-area-inset-right));
+  top: calc(max(12px, env(safe-area-inset-top)) + 350px);
+  width: 52px;
+  height: 52px;
+  font-size: 10px;
+}
+
+@media (pointer: coarse), (max-width: 520px) {
+  .chatbox {
+    bottom: auto;
+    top: calc(max(12px, env(safe-area-inset-top)) + 70px);
+    width: min(240px, calc(100vw - 190px));
+  }
+}

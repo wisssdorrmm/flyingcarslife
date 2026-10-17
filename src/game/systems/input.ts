@@ -85,7 +85,13 @@ export function readMove(): { x: number; y: number; magnitude: number } {
  * (click the game to lock, Esc to release). Returns a cleanup function.
  */
 export function attachDesktopInput(canvas: HTMLElement, sensitivity: number): () => void {
+  // While typing in a text field (chat, name), keys belong to the field, not the game.
+  const typing = (e: KeyboardEvent) => {
+    const el = e.target as HTMLElement | null;
+    return !!el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable);
+  };
   const onKeyDown = (e: KeyboardEvent) => {
+    if (typing(e)) return;
     const action = keyToAction.get(e.code);
     if (!action) return;
     // Keep Space/Alt/arrows from scrolling the page or opening browser menus.

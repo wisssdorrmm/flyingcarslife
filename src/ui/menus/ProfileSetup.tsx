@@ -8,7 +8,6 @@ import {
   saveProfile,
   TITLES,
 } from '../../game/net/profile';
-import { useNet } from '../../game/store/net';
 
 /**
  * First-launch screen: pick the name and title other players will see above your head. Returning
@@ -55,8 +54,6 @@ export function ProfileSetup() {
             maxLength={16}
             value={name}
             onChange={(e) => setName(e.target.value)}
-            onFocus={() => useNet.getState().setTyping(true)}
-            onBlur={() => useNet.getState().setTyping(false)}
             placeholder="Your name"
           />
         </label>
