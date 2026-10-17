@@ -67,6 +67,12 @@ const MODEL_OPTIONS: Record<
     maxTexture: 1024,
     replaceImages: { Khronos_C: flyingCarBadge },
   },
+  // Same car at ~20% of the triangles, for parked cars (written as car_concept_lod.glb).
+  'car_concept@lod': {
+    maxTexture: 512,
+    replaceImages: { Khronos_C: flyingCarBadge },
+    simplify: { ratio: 0.2, error: 0.004 },
+  },
   // Flat wall panels are heavily over-tessellated (4.6k tris → ~200 at <1 mm error).
   modular_urban_apartments_facade: {
     maxTexture: 1024,
@@ -158,9 +164,13 @@ async function compressModels(onlyModel?: string): Promise<void> {
       MODEL_SOURCES.map(async (dir) => (await dirs(dir)).map((id) => ({ dir, id }))),
     )
   ).flat();
-  for (const { dir, id } of models) {
+  // Models with an `<id>@lod` entry are exported a second time with those options.
+  const variants = models.flatMap((m) =>
+    MODEL_OPTIONS[`${m.id}@lod`] ? [m, { ...m, lod: true }] : [m],
+  ) as { dir: string; id: string; lod?: boolean }[];
+  for (const { dir, id, lod } of variants) {
     if (onlyModel && id !== onlyModel) continue;
-    const opts = MODEL_OPTIONS[id] ?? {};
+    const opts = MODEL_OPTIONS[lod ? `${id}@lod` : id] ?? {};
     const maxTex = opts.maxTexture ?? DEFAULT_MAX_TEXTURE;
     const base = join(dir, id, id);
     const doc = await io.read((await exists(`${base}.gltf`)) ? `${base}.gltf` : `${base}.glb`);
@@ -190,7 +200,7 @@ async function compressModels(onlyModel?: string): Promise<void> {
     );
     if (!opts.skipMeshopt) transforms.push(meshopt({ encoder: MeshoptEncoder, level: 'medium' }));
     await doc.transform(...transforms);
-    const dest = join(outDir, `${id}.glb`);
+    const dest = join(outDir, `${id}${lod ? '_lod' : ''}.glb`);
     await io.write(dest, doc);
     console.log('  model', id, mb((await stat(dest)).size));
   }

@@ -2,11 +2,11 @@ import { useEffect, useMemo } from 'react';
 import { useGLTF } from '@react-three/drei';
 import { modelUrl } from '../../lib/assets';
 import { disposeGroup } from '../world/instancing';
-import { buildStaticCar, CAR_MODEL } from './carModel';
+import { buildStaticCar, CAR_MODEL_LOD } from './carModel';
 import { PARKED } from './parkedLayout';
 
 export function ParkedCars() {
-  const gltf = useGLTF(modelUrl(CAR_MODEL), false, true);
+  const gltf = useGLTF(modelUrl(CAR_MODEL_LOD), false, true);
   const cars = useMemo(
     () =>
       PARKED.map((c) => {
@@ -27,4 +27,4 @@ export function ParkedCars() {
   );
 }
 
-useGLTF.preload(modelUrl(CAR_MODEL), false, true);
+useGLTF.preload(modelUrl(CAR_MODEL_LOD), false, true);

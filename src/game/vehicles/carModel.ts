@@ -4,6 +4,8 @@ import { extractParts } from '../world/instancing';
 
 /** The "Flying Car" brand EV (Khronos CarConcept, rebadged in the asset pipeline). Front faces +z. */
 export const CAR_MODEL = 'car_concept';
+/** The same car at ~20% of the triangles, for parked cars (see compress-assets `car_concept@lod`). */
+export const CAR_MODEL_LOD = 'car_concept_lod';
 
 /** Paint materials in the source model that take the body color. */
 const BODY_PAINT = /^Paint 1/;
