@@ -116,8 +116,9 @@ public/
 - Runtime builds meshes per tile (roads draped on terrain with markings, curbs, sidewalks; extruded buildings with
   procedural facades by style; instanced props) and streams tiles in/out around the car. Colliders per tile.
 - Road graph exported for GPS, traffic, police and "Roads discovered".
-- First area: **North Beach + Fisherman's Wharf** (approx. lat 37.795–37.812, lon −122.425 to −122.400).
-  Expand later (Russian Hill, Downtown, Embarcadero…).
+- Mapped area: **North Beach + Fisherman's Wharf**, plus the **Financial District towers** and the Embarcadero to
+  the Ferry Building (lat 37.789–37.812, lon −122.425 to −122.391). Elevated freeways are skipped; the Bay Bridge
+  is a backdrop landmark. Expand later (Russian Hill, SoMa…).
 
 ---
 
