@@ -17,13 +17,14 @@ import { useGame } from '../store/game';
 import { useNav } from '../store/nav';
 import { useCity } from '../city/cityData';
 import { useCareer } from '../store/career';
+import { toast } from '../store/toasts';
 import { useSettings } from '../store/settings';
 import { consumePress, input, readMove } from '../systems/input';
 import { ArcadeCar } from './arcadeHandling';
 import { carContactHooks } from './contacts';
 import { buildDrivableCar, CAR_MODEL, type CarLook } from './carModel';
 import { crashDrift, updateDrift } from './drift';
-import { FlightController } from './flight';
+import { FlightController, timeUpHooks } from './flight';
 import { emitDust, emitSparks, setTireEmitter } from './tireFxState';
 import { vehicleState } from './vehicleState';
 
@@ -154,6 +155,15 @@ export function DrivableCar({ id, position, heading, paint }: Props) {
     rig.root.add(mesh);
     return mesh;
   }, [rig]);
+  // Flight time is up: let the player know the car is coming down.
+  useEffect(() => {
+    const hook = () => toast('Flight time up: coming down', 'warn');
+    timeUpHooks.add(hook);
+    return () => {
+      timeUpHooks.delete(hook);
+    };
+  }, []);
+
   useEffect(() => {
     const rear = rig.wheels.find((w) => !w.front);
     if (rear) flight.setRearAxle(rear.center.z, rear.center.y);
@@ -381,6 +391,7 @@ export function DrivableCar({ id, position, heading, paint }: Props) {
         damage: Math.round(s.damage),
         reversing: speed < -0.3,
         gear: flight.airborne ? 'F' : tel.gear,
+        flightLeft: flight.airborne ? Math.ceil(flight.timeLeft) : undefined,
         altitude: flight.airborne
           ? Math.max(0, Math.round(pos.y - (useCity.getState().city?.heightAt(pos.x, pos.z) ?? 0)))
           : undefined,

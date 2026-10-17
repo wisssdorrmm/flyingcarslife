@@ -413,6 +413,10 @@ export const FLYING = {
   maxAltitude: 400,
   autoLandHeight: 6,
   batteryDrainPerSec: 0.8,
+  /** Each flight lasts this long (s, from the launch); then the car comes down by itself. */
+  flightSeconds: 10,
+  /** Sink rate once time is up (eases off near the ground for the auto-landing). */
+  timeUpSink: 28,
   // Derived feel (not in the spec list):
   /** Battery % a launch costs. */
   launchCost: 4,

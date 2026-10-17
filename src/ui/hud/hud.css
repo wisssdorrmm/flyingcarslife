@@ -376,6 +376,9 @@
   color: var(--hud-teal);
   font-weight: 700;
 }
+.hud-gauge-warn .hud-gauge-value {
+  color: var(--hud-gold);
+}
 .hud-gauge-value {
   font-size: 18px;
   font-weight: 800;

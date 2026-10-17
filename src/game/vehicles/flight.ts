@@ -21,6 +21,9 @@ export interface FlightInput {
   descend: boolean;
 }
 
+/** Fired when a flight's time runs out and the car starts coming down. */
+export const timeUpHooks = new Set<() => void>();
+
 /** Launch listeners (dust, debris, sound, bystanders looking up). */
 export const launchHooks = new Set<(at: { x: number; y: number; z: number }) => void>();
 
@@ -82,6 +85,8 @@ export class FlightController {
   private forward = 0;
   private vy = 0;
   private launches = 0;
+  /** Seconds since the launch (each flight is limited to FLYING.flightSeconds). */
+  private airTime = 0;
   /** Rear axle in the car's frame (pivot for the nose-up) and its world position. */
   private axleLocal = new THREE.Vector3(0, 0.36, -1.35);
   private axleWorld = new THREE.Vector3();
@@ -92,6 +97,13 @@ export class FlightController {
 
   get airborne(): boolean {
     return this.mode !== 'ground';
+  }
+
+  /** Flight time left (s); 0 once the car has to come down. */
+  get timeLeft(): number {
+    return this.mode === 'ground'
+      ? FLYING.flightSeconds
+      : Math.max(0, FLYING.flightSeconds - this.airTime);
   }
 
   /** Launch phases (no control, no crash damage). */
@@ -125,6 +137,7 @@ export class FlightController {
       .add(tmp.p.set(p.x, p.y, p.z));
     this.vy = 0;
     this.launches++;
+    this.airTime = 0;
     this.rand = seeded(this.launches * 7919 + Math.floor(performance.now()));
     this.mode = 'noseUp';
     this.t = 0;
@@ -165,6 +178,7 @@ export class FlightController {
     dt: number,
   ): number {
     this.t += dt;
+    this.airTime += dt;
     const { q, target, v, w } = tmp;
     const r = rb.rotation();
     q.set(r.x, r.y, r.z, r.w);
@@ -226,7 +240,12 @@ export class FlightController {
       if (k >= 1) this.mode = battery > 0 ? 'fly' : 'glide';
     } else {
       const dist = ground();
-      if (this.mode !== 'landing' && battery <= 0) this.mode = 'glide';
+      // Out of flight time (or battery): come down.
+      const timeUp = this.airTime >= FLYING.flightSeconds;
+      if (this.mode === 'fly' && (battery <= 0 || timeUp)) {
+        this.mode = 'glide';
+        if (timeUp) for (const hook of timeUpHooks) hook();
+      }
       const gliding = this.mode === 'glide';
       // Auto-land: low over a surface and not climbing.
       if (
@@ -237,7 +256,7 @@ export class FlightController {
       ) {
         this.mode = 'landing';
       }
-      if (this.mode === 'landing' && input.climb && battery > 0) this.mode = 'fly';
+      if (this.mode === 'landing' && input.climb && battery > 0 && !timeUp) this.mode = 'fly';
 
       if (this.mode === 'landing') {
         // Level out and settle gently onto the wheels.
@@ -260,8 +279,12 @@ export class FlightController {
         this.forward += THREE.MathUtils.clamp(want - this.forward, -rate * dt, rate * dt);
         const turn = 0.5 + 0.5 * Math.min(1, Math.abs(this.forward) / 15);
         this.heading -= input.steer * FLYING.yawRate * turn * dt;
+        // Time up: drop quickly, easing off near the ground for the auto-landing.
+        const sink = timeUp
+          ? Math.min(FLYING.timeUpSink, Math.max(4, dist * 0.6))
+          : FLYING.glideSink;
         let vyWant = gliding
-          ? -FLYING.glideSink
+          ? -sink
           : input.climb
             ? FLYING.climbSpeed
             : input.descend

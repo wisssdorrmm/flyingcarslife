@@ -5,12 +5,19 @@ import { useDrift } from '../../game/vehicles/drift';
 export function Gauges() {
   const mult = useDrift((s) => (s.active ? s.multiplier : 0));
   const altitude = useGame((s) => s.vehicleHud?.altitude ?? null);
+  const left = useGame((s) => s.vehicleHud?.flightLeft ?? null);
   return (
     <>
       {mult > 0 && (
         <div className="hud-gauge hud-panel">
           <div className="hud-gauge-label">COMBO</div>
           <div className="hud-gauge-value">×{mult}</div>
+        </div>
+      )}
+      {left !== null && (
+        <div className={`hud-gauge hud-panel${left <= 3 ? ' hud-gauge-warn' : ''}`}>
+          <div className="hud-gauge-label">FLIGHT</div>
+          <div className="hud-gauge-value">{left > 0 ? `${left}s` : 'LANDING'}</div>
         </div>
       )}
       {altitude !== null && (

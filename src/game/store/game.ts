@@ -13,6 +13,8 @@ export interface VehicleHud {
   gear: string;
   /** Height above ground (m) while flying, else absent. */
   altitude?: number;
+  /** Seconds of flight left while airborne. */
+  flightLeft?: number;
 }
 
 interface GameState {
