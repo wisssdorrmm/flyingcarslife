@@ -18,6 +18,7 @@
 
 ### Non-negotiables
 - **Realistic look** comes from real PBR assets, HDRI lighting and post-processing. Never use untextured primitive boxes for visible world objects (debug only).
+- **All world-building follows the Visual Style Guide in section 10** (sunny West Coast city, worn and dirty, never clean or brand new).
 - **Runs on phones** via automatic quality tiers.
 - **First load under 40 MB**; the rest streams in.
 - **Single-player first.** Code must not block adding multiplayer later.
@@ -330,3 +331,77 @@ Each phase lists what to build and a checklist. Paste the **prompt** into Claude
 
 - First load under 40 MB; each streamed chunk under 8 MB.
 - Draw calls under 300 on Low, under 800 on High.
+
+---
+
+## 10. Visual Style Guide: Harbor City
+
+Applies to **all world-building from now on**. Do not restart finished phases: apply it to the current and future phases, and update already-built scenes where it is quick to do so. Every detail must stay inside the section 9 budgets (decals, instancing, LODs, merged geometry).
+
+### City feel
+- Harbor City is a sunny West Coast city inspired by Los Angeles: palm trees, dry hills, wide avenues, hazy downtown towers.
+- Default lighting: bright midday sun, clear blue sky with soft scattered clouds, strong sharp shadows, warm dusty color grade, slight distance haze (atmospheric fog) so far buildings look soft and blue-grey.
+- Realism comes from wear and dirt. **Nothing should look clean or brand new.**
+- Never copy GTA/Rockstar assets, names, logos or landmarks. Everything is original and fictional (e.g. the hillside sign reads **"HARBOR HILLS"**).
+
+### Roads
+- Main avenues: 4–6 lanes, two-way, some with a raised concrete median.
+- Asphalt: light grey, sun-faded, with cracks, patches, tar seams, oil stains and tire marks (decals + PBR asphalt, varied per road).
+- Markings: white dashed lane lines, double yellow center lines, white stop lines and zebra crossings, all slightly worn/faded with gaps.
+- Curbs: raised concrete curbs with some red-painted no-parking sections.
+- Drain grates and manhole covers along the road edges.
+
+### Sidewalks
+- Wide light concrete sidewalks of large square slabs with visible seams, cracks, stains, gum spots and small litter (cups, paper, leaves).
+- Suburbs: grass verges and small shrub beds. Downtown: tree pits with palm trees.
+
+### Intersections and street furniture
+- Traffic lights on tall grey poles with arms hanging over the lanes; pedestrian crossing signals at corners.
+- Tall grey curved-arm street lamps along every road.
+- Palm trees lining avenues (mix of tall thin and short fat palms), swaying slightly.
+- Bus stops, fire hydrants, trash cans, newspaper boxes, street signs with original street names, billboards (the Phase 11 ad slots).
+
+### Bridge / overpass (signature location)
+- A wide road bridge leading toward downtown with stone balustrade railings and ornate old-style lamp posts, the downtown skyline directly behind it. Key trailer and flying take-off spot.
+
+### Buildings
+- Downtown: tall glass skyscrapers in blue, teal and grey glass with reflective PBR materials, clustered together; a few with rooftop helipads/landing pads.
+- Near the roads: 2–4 storey shops, offices, a round cylindrical office tower, fast-food spots, a gas station, parking lots, with signage and awnings.
+- Background: dry brown hills with scattered green trees and the original hillside sign, visible from most streets (low-poly hill mesh + backdrop for far distance).
+
+### Traffic and life
+- Everyday cars: sedans, SUVs, pickups, yellow taxis, buses, police cruisers. Realistic paint mix: mostly white/silver/black/grey, a few bright ones.
+- Cars stop at red lights, queue and change lanes. Pedestrians walk on sidewalks and cross at lights.
+
+### Flying car disguise (gameplay)
+- With wheels down, the player's flying car looks like a normal road car. Police ignore it on the road unless the player commits a crime.
+- On take-off, nearby NPCs react (stop, point, film with phones). Police only add stars if the take-off breaks a rule (no-fly zone, outside a sky lane, or during a chase).
+
+### Bystander camera mode (for sharing)
+- "Phone camera" mode: the player stands on the sidewalk and films in vertical 9:16 with slight handheld shake, auto-exposure and focus, no HUD.
+- A record button captures a short clip (MediaRecorder on the canvas) with a small "Flying Cars Life" watermark, which the player can download to post on X/TikTok.
+
+### Acceptance check
+- A screenshot from the sidewalk looks like a sunny real-world LA street: cracked concrete, faded lines, palm trees, traffic lights over the road, hazy towers in the distance, hills behind.
+- Section 9 performance budgets still hold.
+
+### Where each part is built
+| Part | Phase |
+|---|---|
+| Sun, sky, sharp shadows, warm grade, blue-grey haze | Applied to the existing city (Phase 1/5 retrofit) |
+| Faded asphalt + crack/patch/seam/oil/tire decals, red curbs, drain grates | Applied to the existing city |
+| Light slab sidewalks with stains, gum, litter | Applied to the existing city |
+| Palm trees (tall thin + short fat, swaying) in tree pits | Applied to the existing city |
+| Dry hills backdrop + HARBOR HILLS sign | Applied to the existing city |
+| Blue/teal reflective glass | Applied to existing glazing; full glass towers in Phase 5 |
+| Bystander phone camera + clip recording | Built now (self-contained) |
+| 4–6 lane avenues with medians, the bridge/overpass | Phase 5 (city expansion) |
+| Downtown glass skyscraper cluster, helipads, round office tower | Phase 5 (with rooftop car parks); landing pads tie into Phase 4 |
+| Shops/fast food/gas station/parking lots with signage and awnings | Phase 5 (layout) + Phase 6/8 (enterable businesses) |
+| Pedestrian crossing signals, bus stops, newspaper boxes | Phase 5 (with pedestrians and traffic) |
+| Billboards | Phase 11 (ad slots) |
+| Suburban grass verges and shrub beds | Phase 5 (Suburbs) |
+| Traffic mix, queueing, lane changes, pedestrians | Phase 5 |
+| Flying-car disguise look (wheels down) | Phase 4 |
+| NPCs react to take-off (stop, point, film) | Phase 5 (pedestrians) + Phase 9 |
+| Police stars only when take-off breaks a rule | Phase 9 |
