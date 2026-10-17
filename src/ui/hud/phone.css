@@ -236,3 +236,49 @@
 .hud-touch .hud-gear {
   display: none;
 }
+
+/* Any phone width: controls scale with the screen, and narrow phones get shorter labels. */
+.tc-left .tc-btn {
+  width: clamp(52px, 16vw, 64px);
+  height: clamp(52px, 16vw, 64px);
+}
+.tc-drift,
+.tc-brake,
+.tc-launch {
+  width: clamp(52px, 16vw, 64px);
+}
+.tc-gas {
+  width: clamp(60px, 18vw, 72px);
+  height: clamp(124px, 38vw, 160px);
+}
+@media (max-width: 400px) {
+  .tc-launch,
+  .tc-drift,
+  .tc-brake {
+    font-size: 10px;
+    letter-spacing: 0;
+  }
+  .hud-touch ~ .ms-layer .ms-open-kicker {
+    display: none;
+  }
+  .hud-touch .hud-btn {
+    padding: 0 9px;
+  }
+  .hud-touch .hud-cash {
+    padding: 5px 9px;
+    font-size: 14px;
+  }
+  .hud-touch .hud-tr {
+    gap: 4px;
+  }
+  .hud-touch .hud-speedo {
+    width: 72px;
+    height: 72px;
+  }
+  .hud-touch .hud-speed {
+    font-size: 20px;
+  }
+  .hud-touch .hud-br {
+    bottom: calc(max(16px, env(safe-area-inset-bottom)) + clamp(124px, 38vw, 160px) + 22px);
+  }
+}
