@@ -9,6 +9,8 @@ export interface VehicleHud {
   battery: number;
   damage: number;
   reversing: boolean;
+  /** Gear letter: R, N or 1–6. */
+  gear: string;
 }
 
 interface GameState {

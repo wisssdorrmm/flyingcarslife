@@ -2,6 +2,9 @@ import { useCallback, useState } from 'react';
 import { suspend } from 'suspend-react';
 import { CITY_STREAMING } from '../config';
 import { DrivableCar } from '../vehicles/DrivableCar';
+import { Pedestrians } from '../npc/Pedestrians';
+import { Traffic } from '../traffic/Traffic';
+import { TireFx } from '../vehicles/TireFx';
 import { loadCity, preloadAround } from './cityData';
 import { CityTiles } from './CityTiles';
 import { GpsRoute } from './GpsRoute';
@@ -30,6 +33,9 @@ export function City() {
       <CityTiles city={city} onReady={onReady} />
       <Water />
       <GpsRoute city={city} />
+      <TireFx />
+      {groundReady && <Traffic city={city} />}
+      {groundReady && <Pedestrians city={city} />}
       {groundReady && (
         <DrivableCar
           id="player-car"

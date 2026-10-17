@@ -122,6 +122,8 @@ export interface RoadNetwork {
   trams: Ring[];
   /** Way ids on trolleybus routes (overhead wires). */
   trolleyWays: Set<number>;
+  /** Way ids on any bus route (trolleybus included). */
+  busWays: Set<number>;
 }
 
 export function buildRoads(osm: Osm): RoadNetwork {
@@ -203,11 +205,16 @@ export function buildRoads(osm: Osm): RoadNetwork {
     if (w.tags.railway === 'tram' && !w.tags.tunnel) trams.push(osm.pts(w));
   }
   const trolleyWays = new Set<number>();
+  const busWays = new Set<number>();
   for (const r of osm.relations) {
-    if (r.tags.route !== 'trolleybus') continue;
-    for (const m of r.members) if (m.type === 'way') trolleyWays.add(m.ref);
+    if (r.tags.route !== 'trolleybus' && r.tags.route !== 'bus') continue;
+    for (const m of r.members) {
+      if (m.type !== 'way') continue;
+      busWays.add(m.ref);
+      if (r.tags.route === 'trolleybus') trolleyWays.add(m.ref);
+    }
   }
-  return { edges, junctions, trams, trolleyWays };
+  return { edges, junctions, trams, trolleyWays, busWays };
 }
 
 /**

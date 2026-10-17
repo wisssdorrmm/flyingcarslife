@@ -277,6 +277,119 @@ export const VEHICLE = {
   enterDistance: 3,
 } as const;
 
+/**
+ * Arcade handling layered on the raycast vehicle (vehicles/arcadeHandling.ts): the wheels give
+ * suspension and drive force; sideways grip and turning come from this model.
+ */
+export const DRIVING = {
+  /** Rapier wheel friction: forward traction, and sideways (kept low, the arcade layer grips). */
+  wheelTraction: 3,
+  wheelSideFriction: 0.2,
+  engineForce: 15000,
+  reverseForce: 6500,
+  /** Rapier wheel brake strength (service brakes, handbrake on the rear). */
+  brakeForce: 70,
+  handbrakeForce: 35,
+  /** Resistance F = rolling + drag·v²; top speed ≈ √(engineForce / drag). */
+  rolling: 160,
+  drag: 2.6,
+  /** Extra down force per (m/s)² so the car stays planted at speed. */
+  downforce: 1.3,
+  /** Lateral grip: how fast sideways velocity dies out (1/s), normal and drifting. */
+  grip: 9,
+  driftGrip: 1.15,
+  /** Seconds for grip to come back after a drift. */
+  gripRecovery: 0.7,
+  /** Yaw: target rate = speed / radius, radius = base + perMs·speed, capped. */
+  turnRadiusBase: 5.5,
+  turnRadiusPerMs: 0.3,
+  yawRateMax: 2.5,
+  /** How tightly the car follows the target yaw rate (1/s). */
+  yawResponse: 7,
+  /** Extra rotation while drifting. */
+  driftYawBoost: 1.7,
+  /** Share of the sideways speed lost in a drift that carries on as forward speed. */
+  driftCarry: 0.6,
+  /** ESP keeps the slide angle under this (rad). */
+  espMaxSlip: 0.55,
+  /** TCS off: full throttle below this speed (m/s) breaks rear grip (power slides). */
+  tcsOffSlipSpeed: 14,
+  /** ABS off: grip multiplier while braking hard above 10 m/s. */
+  absOffGrip: 0.35,
+  /** Six gears: top speed (m/s) and force multiplier. */
+  gearTop: [14, 24, 34, 45, 58, 76],
+  gearForce: [1.35, 1.15, 1.0, 0.9, 0.8, 0.72],
+  /** Airborne: how fast the car levels itself (1/s). */
+  airLevel: 2.2,
+  /** Upside down and slow for this long → flipped back onto its wheels. */
+  autoFlipSeconds: 2.2,
+} as const;
+
+/** Drift scoring (vehicles/drift.ts). */
+export const DRIFT = {
+  minSpeed: 8,
+  /** Slide angle (rad) that counts as drifting (~14°). */
+  minSlip: 0.25,
+  /** Points per second = speed · slip factor · this. */
+  pointsRate: 9,
+  /** Every this many seconds of unbroken drifting adds ×1, up to maxMultiplier. */
+  comboStep: 2.2,
+  maxMultiplier: 5,
+  /** Drift banks after this long without sliding. */
+  endAfter: 1.1,
+  /** Cash paid per banked point (after the multiplier). */
+  cashPerPoint: 0.05,
+} as const;
+
+/** AI traffic (src/game/traffic). Speeds in m/s. */
+export const TRAFFIC = {
+  /** Cars kept around the player, by quality tier. */
+  count: { low: 14, medium: 24, high: 34, ultra: 44 },
+  /** Share of spawns that are buses (on bus routes only). */
+  busShare: 0.15,
+  spawnMin: 90,
+  spawnMax: 330,
+  despawn: 420,
+  /** Agents within this distance get collision bodies. */
+  physicsRadius: 90,
+  /** Cruising speed by road class. */
+  speed: { major: 15, minor: 13, residential: 10, service: 6 },
+  /** Intelligent-driver model: max accel, comfortable braking, min gap (m), time headway (s). */
+  accel: 2.4,
+  brake: 4,
+  minGap: 2.5,
+  headway: 1.3,
+  /** Signal cycle per approach: green, yellow, all-red (s). */
+  green: 11,
+  yellow: 3,
+  allRed: 1.2,
+  /** A hit harder than this (N·s) wrecks an AI car (it becomes a physics body). */
+  wreckImpulse: 2500,
+  /** Seconds a wreck stays before it's cleared. */
+  wreckSeconds: 25,
+} as const;
+
+/** Pedestrians on the sidewalks (src/game/npc). */
+export const PEDESTRIANS = {
+  count: { low: 6, medium: 12, high: 20, ultra: 28 },
+  spawnMin: 25,
+  spawnMax: 130,
+  despawn: 170,
+  walkSpeed: 1.35,
+  runSpeed: 4.2,
+  /** Distance from the road edge to the walking line (m). */
+  sidewalkOffset: 1.7,
+  /** A car closer than this and faster than fleeSpeed (m/s), heading at them, scares them. */
+  fleeDistance: 11,
+  fleeSpeed: 5,
+  fleeSeconds: 2.6,
+  /** Hit by the car: down for this long. */
+  hitDistance: 1.7,
+  downSeconds: 4,
+  /** Full animation updates within this range; further ones update less often. */
+  animRange: 55,
+} as const;
+
 export const CHASE_CAMERA = {
   distance: 6.2,
   height: 1.9,
@@ -291,7 +404,7 @@ export const CHASE_CAMERA = {
 } as const;
 
 /** Speed units for the HUD: 'mph' (US setting) or 'kmh'. */
-export const HUD_UNITS: 'mph' | 'kmh' = 'mph';
+export const HUD_UNITS: 'mph' | 'kmh' = 'kmh';
 
 /** Body and calories. Everything is in game time (1 real second = 1 game minute). */
 export const BODY = {

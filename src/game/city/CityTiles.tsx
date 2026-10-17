@@ -5,11 +5,20 @@ import type { Collider, RigidBody } from '@dimforge/rapier3d-compat';
 import * as THREE from 'three';
 import { CITY_STREAMING } from '../config';
 import { useSettings } from '../store/settings';
+import { trafficRef } from '../traffic/trafficSim';
 import { vehicleState } from '../vehicles/vehicleState';
 import { useCityMaterials } from './cityMaterials';
-import { loadTile, preloadedTiles, tileDistance, type City, type DecodedTile } from './cityData';
+import {
+  loadTile,
+  preloadedTiles,
+  registerTileHeights,
+  tileDistance,
+  type City,
+  type DecodedTile,
+} from './cityData';
 import { tileKey, type TileEntry, type TileMeshName } from './format';
 import {
+  coneGeometry,
   lampGeometry,
   parkedCarGeometries,
   PARKED_PAINTS,
@@ -24,7 +33,17 @@ interface Tile {
   abort: AbortController | null;
   group: THREE.Group | null;
   colliders: Collider[] | null;
+  /** Knockable cones (dynamic bodies) while the tile has physics. */
+  cones: RigidBody[] | null;
 }
+
+/** Signal head centers in the pole's frame (see propModels.signalGeometries). */
+const SIGNAL_HEADS: [number, number, number][] = [
+  [-4.6, 5.3, 0.05 + 0.14],
+  [0, 3.2, 0.2 + 0.14],
+];
+const LAMP_COLOR = new THREE.Color();
+const LAMP_BASE = new THREE.Vector3();
 
 const SHADOW_CASTERS: TileMeshName[] = ['buildings', 'pier'];
 
@@ -88,6 +107,13 @@ export function CityTiles({ city, onReady }: { city: City; onReady?: () => void 
         1500,
         false,
       ),
+      // One lit lamp per signal head (two heads per pole); color and slot set from the phase.
+      signalLamp: mk(
+        new THREE.CircleGeometry(0.12, 12),
+        new THREE.MeshBasicMaterial({ color: '#ffffff', toneMapped: false }),
+        3000,
+        false,
+      ),
       carBody: mk(
         car.body,
         new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.35, metalness: 0.3 }),
@@ -104,6 +130,12 @@ export function CityTiles({ city, onReady }: { city: City; onReady?: () => void 
         car.wheels,
         new THREE.MeshStandardMaterial({ color: '#16171a', roughness: 0.8 }),
         4000,
+        false,
+      ),
+      cone: mk(
+        coneGeometry(),
+        new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.6 }),
+        800,
         false,
       ),
       wirePole: mk(
@@ -167,10 +199,32 @@ export function CityTiles({ city, onReady }: { city: City; onReady?: () => void 
       );
     }
     t.colliders = list;
+    // Cones: light dynamic bodies, with CCD so a fast car can't skip through them.
+    t.cones = (header.props.cones ?? []).map(([x, y, z]) => {
+      const cone = world.createRigidBody(
+        rapier.RigidBodyDesc.dynamic()
+          .setTranslation(x!, y! + 0.02, z!)
+          .setLinearDamping(0.4)
+          .setAngularDamping(0.6)
+          .setCcdEnabled(true),
+      );
+      world.createCollider(
+        rapier.ColliderDesc.cone(0.34, 0.17).setTranslation(0, 0.38, 0).setMass(2.5),
+        cone,
+      );
+      world.createCollider(
+        rapier.ColliderDesc.cuboid(0.19, 0.02, 0.19).setTranslation(0, 0.02, 0).setMass(1),
+        cone,
+      );
+      cone.sleep();
+      return cone;
+    });
   };
   const removeColliders = (t: Tile) => {
     if (bodyRef.current) for (const c of t.colliders ?? []) world.removeCollider(c, false);
     t.colliders = null;
+    for (const c of t.cones ?? []) world.removeRigidBody(c);
+    t.cones = null;
   };
 
   const show = (t: Tile, data: DecodedTile) => {
@@ -190,6 +244,7 @@ export function CityTiles({ city, onReady }: { city: City; onReady?: () => void 
     }
     t.group = g;
     root.current?.add(g);
+    registerTileHeights(t.key, data.header);
     propsDirty.current = true;
   };
 
@@ -201,6 +256,7 @@ export function CityTiles({ city, onReady }: { city: City; onReady?: () => void 
       for (const m of t.group.children) (m as THREE.Mesh).geometry.dispose();
     }
     tiles.current.delete(t.key);
+    registerTileHeights(t.key, null);
     propsDirty.current = true;
   };
 
@@ -215,6 +271,7 @@ export function CityTiles({ city, onReady }: { city: City; onReady?: () => void 
   }, [mats]);
 
   const rebuildProps = () => {
+    signalList.current = [];
     const m4 = new THREE.Matrix4();
     const q = new THREE.Quaternion();
     const s = new THREE.Vector3();
@@ -252,9 +309,11 @@ export function CityTiles({ city, onReady }: { city: City; onReady?: () => void 
         put('canopy', x!, y!, z!, rot!, sc, col);
       }
       for (const [x, y, z, rot] of pr.lamps) put('lamp', x!, y!, z!, rot!);
-      for (const [x, y, z, rot] of pr.signals) {
+      for (const sig of pr.signals) {
+        const [x, y, z, rot] = sig;
         put('signalPole', x!, y!, z!, rot!);
         put('signalHead', x!, y!, z!, rot!);
+        signalList.current.push(sig);
       }
       for (const [x, y, z, rot, paint] of pr.parked) {
         put('carBody', x!, y!, z!, rot!, 1, PARKED_PAINTS[paint! % PARKED_PAINTS.length]);
@@ -290,7 +349,15 @@ export function CityTiles({ city, onReady }: { city: City; onReady?: () => void 
     for (const { e } of wanted) {
       const key = tileKey(e.ix, e.iz);
       if (tiles.current.has(key)) continue;
-      const t: Tile = { entry: e, key, data: null, abort: null, group: null, colliders: null };
+      const t: Tile = {
+        entry: e,
+        key,
+        data: null,
+        abort: null,
+        group: null,
+        colliders: null,
+        cones: null,
+      };
       tiles.current.set(key, t);
       const pre = preloadedTiles.get(key);
       if (pre) {
@@ -330,7 +397,22 @@ export function CityTiles({ city, onReady }: { city: City; onReady?: () => void 
   // first physics step, since the first frame after loading can run many catch-up steps. Creation
   // and teardown live in one effect so React StrictMode's mount → unmount → mount stays consistent.
   useLayoutEffect(() => {
-    bodyRef.current = world.createRigidBody(rapier.RigidBodyDesc.fixed());
+    const body = world.createRigidBody(rapier.RigidBodyDesc.fixed());
+    bodyRef.current = body;
+    // Invisible walls around the mapped area (tall enough for flying cars later).
+    const b = city.index.bounds;
+    const cx = (b.x0 + b.x1) / 2;
+    const cz = (b.z0 + b.z1) / 2;
+    const hx = (b.x1 - b.x0) / 2;
+    const hz = (b.z1 - b.z0) / 2;
+    for (const [x, z, sx, sz] of [
+      [cx, b.z0 - 1, hx + 2, 1],
+      [cx, b.z1 + 1, hx + 2, 1],
+      [b.x0 - 1, cz, 1, hz + 2],
+      [b.x1 + 1, cz, 1, hz + 2],
+    ] as const) {
+      world.createCollider(rapier.ColliderDesc.cuboid(sx, 300, sz).setTranslation(x, 150, z), body);
+    }
     const { x, z } = city.index.spawn;
     stream(x, z);
     rebuildProps();
@@ -345,7 +427,72 @@ export function CityTiles({ city, onReady }: { city: City; onReady?: () => void 
     // eslint-disable-next-line react-hooks/exhaustive-deps -- once per city / physics world
   }, [city, world, rapier]);
 
-  useFrame(({ camera, clock }) => {
+  // Signal lamps: refreshed a few times a second from the traffic sim's phases.
+  const signalList = useRef<number[][]>([]);
+  const lampTimer = useRef(0);
+  const updateLamps = (dt: number) => {
+    lampTimer.current -= dt;
+    if (lampTimer.current > 0) return;
+    lampTimer.current = 0.25;
+    const mesh = props.signalLamp;
+    const sim = trafficRef.sim;
+    let n = 0;
+    for (const [x, y, z, rot, node, edge] of signalList.current) {
+      const light =
+        sim && node !== undefined && node >= 0 ? sim.signals.light(node, edge!, sim.time) : 'green';
+      const slot = light === 'red' ? 0.33 : light === 'yellow' ? 0 : -0.33;
+      LAMP_COLOR.set(light === 'red' ? '#ff2a1f' : light === 'yellow' ? '#ffb31a' : '#2bff7a');
+      coneQ.setFromAxisAngle(THREE.Object3D.DEFAULT_UP, rot!);
+      // The two heads: on the mast arm over the road, and low on the pole.
+      for (const [hx, hy, hz] of SIGNAL_HEADS) {
+        coneP
+          .set(hx, hy + slot, hz + 0.15)
+          .applyQuaternion(coneQ)
+          .add(LAMP_BASE.set(x!, y!, z!));
+        if (n >= mesh.instanceMatrix.count) break;
+        mesh.setMatrixAt(n, coneMatrix.compose(coneP, coneQ, one));
+        mesh.setColorAt(n, LAMP_COLOR);
+        n++;
+      }
+    }
+    mesh.count = n;
+    mesh.instanceMatrix.needsUpdate = true;
+    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+  };
+
+  // Cones follow their bodies where tiles have physics, and stand at their spots elsewhere.
+  const coneMatrix = useMemo(() => new THREE.Matrix4(), []);
+  const coneQ = useMemo(() => new THREE.Quaternion(), []);
+  const coneP = useMemo(() => new THREE.Vector3(), []);
+  const one = useMemo(() => new THREE.Vector3(1, 1, 1), []);
+  const updateCones = () => {
+    const mesh = props.cone;
+    let n = 0;
+    for (const t of tiles.current.values()) {
+      if (!t.data) continue;
+      const spots = t.data.header.props.cones ?? [];
+      for (let i = 0; i < spots.length && n < mesh.instanceMatrix.count; i++) {
+        const body = t.cones?.[i];
+        if (body) {
+          const p = body.translation();
+          const r = body.rotation();
+          coneP.set(p.x, p.y, p.z);
+          coneQ.set(r.x, r.y, r.z, r.w);
+        } else {
+          const [x, y, z] = spots[i]!;
+          coneP.set(x!, y!, z!);
+          coneQ.identity();
+        }
+        mesh.setMatrixAt(n++, coneMatrix.compose(coneP, coneQ, one));
+      }
+    }
+    mesh.count = n;
+    mesh.instanceMatrix.needsUpdate = true;
+  };
+
+  useFrame(({ camera, clock }, dt) => {
+    updateCones();
+    updateLamps(dt);
     if (clock.elapsedTime - last.current < CITY_STREAMING.checkInterval && !propsDirty.current)
       return;
     if (clock.elapsedTime - last.current >= CITY_STREAMING.checkInterval) {

@@ -25,6 +25,7 @@ const TEXTURES = [
   'white_stucco', // plaster facade
   'granite_tile', // storefront base
   'metal_plate', // poles, traffic light housings
+  'leafy_grass', // park lawns
 ];
 const TEXTURE_RES = '2k';
 

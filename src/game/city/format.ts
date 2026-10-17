@@ -4,7 +4,7 @@
  * Map data © OpenStreetMap contributors (ODbL).
  */
 
-export const CITY_FORMAT_VERSION = 1;
+export const CITY_FORMAT_VERSION = 2;
 export const TILE_SIZE = 250;
 /** Sidewalks, lots and parks sit this far above the asphalt (curb height). */
 export const CURB = 0.15;
@@ -60,7 +60,7 @@ export interface TileProps {
   trees: number[][];
   /** [x, y, z, rotY] street lamps; the arm points along rotY (toward the road). */
   lamps: number[][];
-  /** [x, y, z, rotY] traffic signal poles; heads face rotY. */
+  /** [x, y, z, rotY, node, edge] traffic signal poles; heads face rotY (approach `edge` of `node`). */
   signals: number[][];
   /** [x, y, z, rotY, paint] parked cars. */
   parked: number[][];
@@ -68,6 +68,12 @@ export interface TileProps {
   wires: number[][];
   /** [x, y, z] wire support poles. */
   wirePoles: number[][];
+  /** [x, y, z] traffic cones (knockable). */
+  cones: number[][];
+}
+
+export function emptyTileProps(): TileProps {
+  return { trees: [], lamps: [], signals: [], parked: [], wires: [], wirePoles: [], cones: [] };
 }
 
 export interface TileHeader {
@@ -76,8 +82,20 @@ export interface TileHeader {
   iz: number;
   meshes: Partial<Record<TileMeshName, MeshInfo>>;
   props: TileProps;
+  /** Drivable-surface height on a fine grid over the tile (for placing traffic on the hills). */
+  height: HeightGrid;
   /** Collision: indices into `meshes` that go into the tile's trimesh collider. */
   colliders: TileMeshName[];
+}
+
+/** Row-major height samples; `data` is base64 of little-endian Int16 centimeters. */
+export interface HeightGrid {
+  x0: number;
+  z0: number;
+  step: number;
+  nx: number;
+  nz: number;
+  data: string;
 }
 
 export interface TileEntry {
@@ -96,7 +114,13 @@ export interface RoadEdge {
   cls: RoadClass;
   oneway: boolean;
   lanes: number;
+  /** Lanes heading a → b (two-way roads; one-way roads use all lanes). */
+  lanesFwd: number;
+  /** Lateral offset of the travel lanes' center (+ = right of a → b), from one-sided parking. */
+  laneOffset: number;
   width: number;
+  /** On a bus or trolleybus route. */
+  bus: boolean;
   /** Polyline [x0, z0, x1, z1, …] from node a to node b. */
   pts: number[];
   length: number;
@@ -116,8 +140,10 @@ export interface CityIndex {
   /** Road graph: node i is [x, y, z] at nodes[3i..3i+2]. */
   nodes: number[];
   edges: RoadEdge[];
+  /** Nodes with traffic signals. */
+  signals: number[];
   /**
-   * Drivable-surface height grid for the whole area, row-major, for GPS ribbons, AI and spawning.
+   * Coarse drivable-surface height grid for the whole area (GPS ribbons, map, far traffic).
    * `data` is base64 of little-endian Int16 decimeters.
    */
   height: { x0: number; z0: number; step: number; nx: number; nz: number; data: string };

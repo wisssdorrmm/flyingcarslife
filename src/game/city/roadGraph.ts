@@ -181,7 +181,8 @@ export class RoadGraph {
     const prevEdge = new Int32Array(n).fill(-1);
     const open: number[] = [];
     const goal = { x: t.x, z: t.z };
-    const h = (i: number) => Math.hypot(this.nodes[i * 3]! - goal.x, this.nodes[i * 3 + 2]! - goal.z);
+    const h = (i: number) =>
+      Math.hypot(this.nodes[i * 3]! - goal.x, this.nodes[i * 3 + 2]! - goal.z);
     const seed = (node: number, cost: number) => {
       if (cost < g[node]!) {
         g[node] = cost;

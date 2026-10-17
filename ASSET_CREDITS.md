@@ -21,6 +21,7 @@ required; we list them anyway. Downloaded by `npm run assets:fetch`, compressed 
 | concrete_floor_worn_001                                                                                   | Texture | Sidewalk slabs                |
 | concrete                                                                                                  | Texture | Curbs, tree pits              |
 | brick_wall_02, dark_brick_wall, white_stucco                                                              | Texture | Building facades, party walls |
+| leafy_grass                                                                                               | Texture | Park lawns                    |
 | granite_tile                                                                                              | Texture | (reserved: storefront bases)  |
 | metal_plate                                                                                               | Texture | Street light and signal poles |
 | modular_urban_apartments_facade                                                                           | Model   | Building facades              |

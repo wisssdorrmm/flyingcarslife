@@ -46,6 +46,46 @@ async function tracked<T>(url: string, run: () => Promise<T>): Promise<T> {
   }
 }
 
+interface FineGrid {
+  x0: number;
+  z0: number;
+  step: number;
+  nx: number;
+  nz: number;
+  data: Int16Array;
+}
+
+/** Fine height grids of the tiles currently loaded (registered by CityTiles). */
+const tileHeights = new Map<string, FineGrid>();
+
+function sampleGrid(g: FineGrid, x: number, z: number): number {
+  const fx = Math.min(Math.max((x - g.x0) / g.step, 0), g.nx - 1.001);
+  const fz = Math.min(Math.max((z - g.z0) / g.step, 0), g.nz - 1.001);
+  const i = Math.floor(fx);
+  const k = Math.floor(fz);
+  const u = fx - i;
+  const v = fz - k;
+  const d = g.data;
+  const n = g.nx;
+  return (
+    (d[k * n + i]! * (1 - u) * (1 - v) +
+      d[k * n + i + 1]! * u * (1 - v) +
+      d[(k + 1) * n + i]! * (1 - u) * v +
+      d[(k + 1) * n + i + 1]! * u * v) /
+    100
+  );
+}
+
+export function registerTileHeights(key: string, header: TileHeader | null): void {
+  if (!header?.height) {
+    tileHeights.delete(key);
+    return;
+  }
+  const h = header.height;
+  const bin = Uint8Array.from(atob(h.data), (c) => c.charCodeAt(0));
+  tileHeights.set(key, { ...h, data: new Int16Array(bin.buffer) });
+}
+
 let cityPromise: Promise<City> | null = null;
 
 /** Fetches the city index once. */
@@ -76,7 +116,13 @@ export function loadCity(): Promise<City> {
         g(i + 1, k + 1) * u * v
       );
     };
-    const city: City = { index, graph: new RoadGraph(index), heightAt };
+    // Prefer the loaded tile's fine grid; fall back to the coarse index grid.
+    const size = index.tileSize;
+    const fineOrCoarse = (x: number, z: number) => {
+      const fine = tileHeights.get(tileKey(Math.floor(x / size), Math.floor(z / size)));
+      return fine ? sampleGrid(fine, x, z) : heightAt(x, z);
+    };
+    const city: City = { index, graph: new RoadGraph(index), heightAt: fineOrCoarse };
     useCity.setState({ city });
     return city;
   });

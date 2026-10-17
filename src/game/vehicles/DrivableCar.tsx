@@ -12,11 +12,17 @@ import type { DynamicRayCastVehicleController } from '@dimforge/rapier3d-compat'
 import * as THREE from 'three';
 import { modelUrl } from '../../lib/assets';
 import { stopEvSound, updateEvSound } from '../audio/evSound';
-import { HUD_UNITS, PHYSICS, VEHICLE } from '../config';
+import { DRIVING, HUD_UNITS, PHYSICS, VEHICLE } from '../config';
 import { useGame } from '../store/game';
 import { useNav } from '../store/nav';
-import { input, readMove } from '../systems/input';
+import { useCareer } from '../store/career';
+import { useSettings } from '../store/settings';
+import { consumePress, input, readMove } from '../systems/input';
+import { ArcadeCar } from './arcadeHandling';
+import { carContactHooks } from './contacts';
 import { buildDrivableCar, CAR_MODEL, type CarLook } from './carModel';
+import { crashDrift, updateDrift } from './drift';
+import { emitSparks, setTireEmitter } from './tireFxState';
 import { vehicleState } from './vehicleState';
 
 interface Props extends CarLook {
@@ -77,8 +83,9 @@ export function DrivableCar({ id, position, heading, paint }: Props) {
       vc.setWheelSuspensionRelaxation(i, VEHICLE.suspensionRelaxation);
       vc.setWheelMaxSuspensionTravel(i, VEHICLE.maxSuspensionTravel);
       vc.setWheelMaxSuspensionForce(i, VEHICLE.maxSuspensionForce);
-      vc.setWheelFrictionSlip(i, VEHICLE.frictionSlip);
-      vc.setWheelSideFrictionStiffness(i, VEHICLE.sideFrictionStiffness);
+      // Strong traction for drive/brake; sideways grip comes from the arcade layer.
+      vc.setWheelFrictionSlip(i, DRIVING.wheelTraction);
+      vc.setWheelSideFrictionStiffness(i, DRIVING.wheelSideFriction);
     }
     vehicle.current = vc;
     return () => {
@@ -87,42 +94,36 @@ export function DrivableCar({ id, position, heading, paint }: Props) {
     };
   }, [world, rig]);
 
+  const arcade = useMemo(() => new ArcadeCar(), []);
+  const fronts = useMemo(() => rig.wheels.map((w) => w.front), [rig]);
+
   useBeforePhysicsStep(() => {
     const vc = vehicle.current;
     const rb = chassis.current;
     if (!vc || !rb) return;
     const dt = PHYSICS.timeStep;
     const s = sim.current;
-    const driving = true;
 
     let throttleIn = 0;
     let steerIn = 0;
     let handbrake = false;
-    // No driving input while the map is open (the car rolls and brakes as if hands-off).
-    if (driving && !useNav.getState().mapOpen) {
+    let shiftUp = false;
+    let shiftDown = false;
+    // No driving input while the map is open (the car coasts hands-off).
+    if (!useNav.getState().mapOpen) {
       const m = readMove();
       throttleIn = m.y;
       steerIn = m.x;
       handbrake = input.held.has('jump');
+      shiftUp = consumePress('sprint');
+      shiftDown = consumePress('flyDown');
     }
 
-    const speed = vc.currentVehicleSpeed();
+    const speed = arcade.telemetry.forward;
     const power =
       (1 - (s.damage / 100) * (1 - VEHICLE.damagedEngineFactor)) * (s.battery > 0 ? 1 : 0);
-    let engine = 0;
-    let brake = 0;
-    if (throttleIn > 0) {
-      if (speed < -0.5) brake = VEHICLE.brakeForce * throttleIn;
-      else engine = throttleIn * VEHICLE.maxEngineForce * power;
-    } else if (throttleIn < 0) {
-      if (speed > 0.5) brake = VEHICLE.brakeForce * -throttleIn;
-      else engine = throttleIn * VEHICLE.reverseForce * power;
-    } else if (!driving) {
-      brake = VEHICLE.brakeForce; // parked
-    }
-    s.throttle = Math.abs(engine) > 0 ? Math.abs(throttleIn) : 0;
 
-    // Speed-sensitive steering, plus a pull to one side once the car is damaged.
+    // Front wheel angle (visual + a little real steering), with a pull once damaged.
     const t = THREE.MathUtils.clamp(Math.abs(speed) / VEHICLE.highSpeedSteerAt, 0, 1);
     const steerScale = THREE.MathUtils.lerp(1, VEHICLE.highSpeedSteerFactor, t);
     const pull =
@@ -131,42 +132,49 @@ export function DrivableCar({ id, position, heading, paint }: Props) {
     const maxStep = VEHICLE.steerRate * dt;
     s.steer += THREE.MathUtils.clamp(target - s.steer, -maxStep, maxStep);
 
-    const frontShare = (1 - VEHICLE.rearBias) / 2;
-    const rearShare = VEHICLE.rearBias / 2;
-    rig.wheels.forEach((w, i) => {
-      vc.setWheelSteering(i, w.front ? s.steer : 0);
-      vc.setWheelEngineForce(i, engine * (w.front ? frontShare : rearShare));
-      const rearHandbrake = handbrake && !w.front;
-      vc.setWheelBrake(i, rearHandbrake ? VEHICLE.handbrakeForce : brake);
-      vc.setWheelFrictionSlip(
-        i,
-        rearHandbrake ? VEHICLE.frictionSlip * VEHICLE.handbrakeGrip : VEHICLE.frictionSlip,
-      );
-    });
-
-    // Rolling resistance + aero drag, opposite the direction of travel.
-    const v = rb.linvel();
-    const flat = Math.hypot(v.x, v.z);
-    if (flat > 0.2) {
-      const f = (VEHICLE.rollingResistance + VEHICLE.aeroDrag * flat * flat) * dt;
-      rb.applyImpulse({ x: (-v.x / flat) * f, y: 0, z: (-v.z / flat) * f }, true);
-    }
-
-    vc.updateVehicle(dt);
-
-    if (engine > 0 || engine < 0) {
+    arcade.step(
+      rb,
+      vc,
+      fronts,
+      {
+        throttle: throttleIn,
+        steer: steerIn - pull / VEHICLE.maxSteer,
+        handbrake,
+        shiftUp,
+        shiftDown,
+      },
+      useCareer.getState().assists,
+      power,
+      s.steer,
+      dt,
+    );
+    const tel = arcade.telemetry;
+    s.throttle = tel.load > 0 ? Math.abs(throttleIn) : 0;
+    if (tel.load > 0) {
       s.battery = Math.max(
         0,
-        s.battery - (s.throttle * dt * 100) / VEHICLE.batteryFullThrottleSeconds,
+        s.battery - (tel.load * dt * 100) / VEHICLE.batteryFullThrottleSeconds,
       );
     }
+    updateDrift(dt, tel.speed, tel.grounded ? tel.slip : 0);
   });
 
   const spawnedAt = useRef(performance.now());
-  const onContactForce = (e: { totalForceMagnitude: number }) => {
+  const onContactForce = (e: {
+    totalForceMagnitude: number;
+    maxForceDirection: { x: number; y: number; z: number };
+    other: { rigidBody?: { handle: number } };
+  }) => {
     // Settling onto the road after spawning isn't a crash.
     if (performance.now() - spawnedAt.current < 2500) return;
     const impulse = e.totalForceMagnitude * PHYSICS.timeStep;
+    const other = e.other.rigidBody?.handle;
+    if (other !== undefined) for (const hook of carContactHooks) hook(other, impulse);
+    const rb = chassis.current;
+    if (rb && impulse > VEHICLE.damageThreshold * 0.25) {
+      emitSparks(rb.translation(), e.maxForceDirection, impulse / VEHICLE.damageThreshold);
+    }
+    if (impulse > VEHICLE.damageThreshold * 0.6) crashDrift();
     if (impulse > VEHICLE.damageThreshold) {
       const s = sim.current;
       s.damage = Math.min(
@@ -181,13 +189,21 @@ export function DrivableCar({ id, position, heading, paint }: Props) {
     const rb = chassis.current;
     const root = visual.current;
     if (!rb || !root) return;
-    vehicleState.active = { id, object: root, bodyHandle: rb.handle, speed: 0, paint: String(paint) };
+    vehicleState.active = {
+      id,
+      object: root,
+      bodyHandle: rb.handle,
+      speed: 0,
+      paint: String(paint),
+    };
     useGame.getState().enterVehicle(id);
+    // Debug hook for automated handling checks.
+    if (useSettings.getState().debug) Object.assign(window, { __drive: arcade.telemetry });
     return () => {
       if (vehicleState.active?.id === id) vehicleState.active = null;
       stopEvSound();
     };
-  }, [id, paint]);
+  }, [id, paint, arcade]);
 
   useFrame((_, dt) => {
     const vc = vehicle.current;
@@ -205,18 +221,26 @@ export function DrivableCar({ id, position, heading, paint }: Props) {
       w.spin.rotation.x = vc.wheelRotation(i) ?? 0;
     });
 
-    const speed = vc.currentVehicleSpeed();
+    const tel = arcade.telemetry;
+    const speed = tel.forward;
     if (vehicleState.active) vehicleState.active.speed = speed;
-    updateEvSound(speed, s.throttle);
+    updateEvSound(speed, s.throttle, tel.tireSlide);
+    // Rear tires: smoke and skid marks where they touch the road.
+    rig.wheels.forEach((w, i) => {
+      if (w.front) return;
+      const p = vc.wheelContactPoint(i);
+      setTireEmitter(i, p && vc.wheelIsInContact(i) ? p : null, tel.tireSlide);
+    });
 
     s.hudTimer -= dt;
     if (s.hudTimer <= 0) {
       s.hudTimer = HUD_INTERVAL;
       game.setVehicleHud({
-        speed: Math.round(Math.abs(speed) * MS_TO_UNITS),
+        speed: Math.round(tel.speed * MS_TO_UNITS),
         battery: Math.round(s.battery),
         damage: Math.round(s.damage),
         reversing: speed < -0.3,
+        gear: tel.gear,
       });
     }
   });

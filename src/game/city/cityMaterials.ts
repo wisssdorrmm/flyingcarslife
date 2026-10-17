@@ -9,9 +9,9 @@ export function useCityMaterials(): Record<TileMeshName, THREE.Material> {
   const asphalt = usePbrMaterial('asphalt_02', { tileMeters: 7, color: '#8d9094', roughness: 1 });
   const pavement = usePbrMaterial('concrete_floor_worn_001', { tileMeters: 3, color: '#e4e0d8' });
   const curb = usePbrMaterial('concrete', { tileMeters: 1.5, color: '#d9d6cf' });
-  const grassBase = usePbrMaterial('concrete_pavement', {
-    tileMeters: 4,
-    color: '#7fae58',
+  const grassBase = usePbrMaterial('leafy_grass', {
+    tileMeters: 3,
+    color: '#a9d97a',
     roughness: 1,
   });
   const sandBase = usePbrMaterial('concrete_pavement', {

@@ -11,6 +11,8 @@ let nodes: {
   whineGain: GainNode;
   roadGain: GainNode;
   roadFilter: BiquadFilterNode;
+  screechGain: GainNode;
+  screechFilter: BiquadFilterNode;
 } | null = null;
 
 function init(): void {
@@ -51,14 +53,30 @@ function init(): void {
   roadGain.gain.value = 0;
   noise.connect(roadFilter).connect(roadGain).connect(master);
 
+  // Tire screech: white noise through a narrow band-pass that wobbles a little.
+  const white = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
+  const wd = white.getChannelData(0);
+  for (let i = 0; i < wd.length; i++) wd[i] = Math.random() * 2 - 1;
+  const screech = ctx.createBufferSource();
+  screech.buffer = white;
+  screech.loop = true;
+  const screechFilter = ctx.createBiquadFilter();
+  screechFilter.type = 'bandpass';
+  screechFilter.frequency.value = 1900;
+  screechFilter.Q.value = 9;
+  const screechGain = ctx.createGain();
+  screechGain.gain.value = 0;
+  screech.connect(screechFilter).connect(screechGain).connect(master);
+
   whine.start();
   whine2.start();
   noise.start();
-  nodes = { master, whine, whine2, whineGain, roadGain, roadFilter };
+  screech.start();
+  nodes = { master, whine, whine2, whineGain, roadGain, roadFilter, screechGain, screechFilter };
 }
 
-/** Call every frame while driving. `speed` in m/s, `throttle` 0–1. */
-export function updateEvSound(speed: number, throttle: number): void {
+/** Call every frame while driving. `speed` in m/s, `throttle` and `slide` (tire slide) 0–1. */
+export function updateEvSound(speed: number, throttle: number, slide = 0): void {
   init();
   if (!ctx || !nodes) return;
   if (ctx.state === 'suspended') void ctx.resume();
@@ -71,6 +89,8 @@ export function updateEvSound(speed: number, throttle: number): void {
   nodes.whineGain.gain.setTargetAtTime(0.012 + throttle * 0.03 + Math.min(s, 30) * 0.0008, t, ramp);
   nodes.roadGain.gain.setTargetAtTime(Math.min(s / 30, 1) * 0.12, t, 0.15);
   nodes.roadFilter.frequency.setTargetAtTime(250 + s * 25, t, 0.15);
+  nodes.screechGain.gain.setTargetAtTime(slide * 0.22, t, 0.06);
+  nodes.screechFilter.frequency.setTargetAtTime(1700 + Math.sin(t * 23) * 180 + s * 6, t, 0.05);
 }
 
 /** Fade out when the player leaves the car. */

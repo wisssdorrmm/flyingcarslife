@@ -166,3 +166,67 @@ export const PARKED_PAINTS = [
   '#3c5e4a',
   '#d7a82e',
 ].map((c) => new THREE.Color(c));
+
+/** Traffic cone, 0.72 m: orange with a white reflective band on a black base. Vertex-colored. */
+export function coneGeometry(): THREE.BufferGeometry {
+  const cone = new THREE.ConeGeometry(0.17, 0.68, 14, 6, true).translate(0, 0.38, 0);
+  const base = new THREE.BoxGeometry(0.38, 0.04, 0.38).translate(0, 0.02, 0);
+  const g = merge([cone, base]);
+  const p = g.getAttribute('position');
+  const colors = new Float32Array(p.count * 3);
+  const orange = new THREE.Color('#ff6a13');
+  const white = new THREE.Color('#f4f4f0');
+  const black = new THREE.Color('#1b1b1b');
+  for (let i = 0; i < p.count; i++) {
+    const y = p.getY(i);
+    const c = y < 0.045 ? black : y > 0.42 && y < 0.55 ? white : orange;
+    colors.set([c.r, c.g, c.b], i * 3);
+  }
+  g.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  return g;
+}
+
+/**
+ * City bus, 11.5 m, front at +z: white body with a red skirt and roof band (vertex colors),
+ * dark window band as a separate glass mesh, and six wheels. Fictional livery, no logos.
+ */
+export function busGeometries(): {
+  body: THREE.BufferGeometry;
+  glass: THREE.BufferGeometry;
+  wheels: THREE.BufferGeometry;
+} {
+  const L = 11.5;
+  const W = 2.55;
+  const lower = new THREE.BoxGeometry(W, 1.35, L, 1, 4, 1).translate(0, 0.33 + 0.675, 0);
+  const roof = new THREE.BoxGeometry(W - 0.04, 0.42, L - 0.1, 1, 1, 1).translate(0, 2.92, 0);
+  const pillars = [-1, 1].map((s) =>
+    new THREE.BoxGeometry(0.06, 1.2, L - 0.2).translate((s * (W - 0.06)) / 2, 2.1, 0),
+  );
+  const body = merge([lower, roof, ...pillars]);
+  const p = body.getAttribute('position');
+  const colors = new Float32Array(p.count * 3);
+  const white = new THREE.Color('#f2f1ec');
+  const red = new THREE.Color('#c8202b');
+  for (let i = 0; i < p.count; i++) {
+    const y = p.getY(i);
+    const c = y < 0.95 || y > 3.0 ? red : white;
+    colors.set([c.r, c.g, c.b], i * 3);
+  }
+  body.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  const glass = merge([
+    new THREE.BoxGeometry(W - 0.08, 1.15, L - 0.6).translate(0, 2.1, 0),
+    // Windshield, set slightly forward.
+    new THREE.BoxGeometry(W - 0.2, 1.5, 0.08).translate(0, 1.95, L / 2 + 0.01),
+  ]);
+  const wheel = (x: number, z: number) =>
+    place(new THREE.CylinderGeometry(0.5, 0.5, 0.32, 14), x, 0.5, z, 0, 0, Math.PI / 2);
+  const wheels = merge([
+    wheel(1.1, 3.6),
+    wheel(-1.1, 3.6),
+    wheel(1.1, -2.9),
+    wheel(-1.1, -2.9),
+    wheel(1.1, -4.0),
+    wheel(-1.1, -4.0),
+  ]);
+  return { body, glass, wheels };
+}

@@ -1,5 +1,5 @@
 /** Instanced street furniture per tile: trees, lamps, signals, parked cars, trolley wires. */
-import { CURB, type TileProps } from '../../src/game/city/format';
+import { CURB, emptyTileProps, type TileProps } from '../../src/game/city/format';
 import { along, pointInRing, rightOf, rng, slice, type Poly, type Pt } from './geom';
 import type { Height } from './ground';
 import type { Osm } from './parse';
@@ -69,14 +69,7 @@ export interface PropContext {
 /** All props for the map, bucketed later by tile. */
 export function buildProps(ctx: PropContext): TileProps {
   const { osm, net, height, footprints, onRoad } = ctx;
-  const props: TileProps = {
-    trees: [],
-    lamps: [],
-    signals: [],
-    parked: [],
-    wires: [],
-    wirePoles: [],
-  };
+  const props: TileProps = emptyTileProps();
   const freeSidewalk = (p: Pt) => !onRoad(p) && !footprints.inside(p, 0.8);
 
   for (const n of osm.nodes.values()) {
@@ -134,6 +127,19 @@ export function buildProps(ctx: PropContext): TileProps {
       }
     }
 
+    // Roadwork: now and then a taper of cones along the right-hand curb lane.
+    if (e.length > 60 && r() < 0.09) {
+      const d = e.cutA + 12 + r() * (e.length - e.cutA - e.cutB - 40);
+      const n = 4 + Math.floor(r() * 4);
+      for (let k = 0; k < n; k++) {
+        const { p, dir } = along(e.pts, d + k * 2.6);
+        const rt = rightOf(dir);
+        const o = half - 0.8 - Math.min(k, 3) * 0.55;
+        const q: Pt = [p[0] + rt[0] * o, p[1] + rt[1] * o];
+        props.cones.push([r2(q[0]), r2(height(...q)), r2(q[1])]);
+      }
+    }
+
     // Parked cars in the parking lanes.
     if ((road.parkingLeft || road.parkingRight) && e.length > 30) {
       const p0 = e.cutA + 9;
@@ -174,7 +180,8 @@ export function buildProps(ctx: PropContext): TileProps {
         j.p[0] + l[0] * (cut + 0.4) + rt[0] * off,
         j.p[1] + l[1] * (cut + 0.4) + rt[1] * off,
       ];
-      props.signals.push([r2(q[0]), r2(height(...q) + CURB), r2(q[1]), yaw(l)]);
+      // Node is the OSM id here; build.ts maps it to the graph index.
+      props.signals.push([r2(q[0]), r2(height(...q) + CURB), r2(q[1]), yaw(l), j.id, e.id]);
     }
   }
 
@@ -220,11 +227,10 @@ export function bucketProps(
   const out = new Map<string, TileProps>();
   const get = (k: string) => {
     let t = out.get(k);
-    if (!t)
-      out.set(k, (t = { trees: [], lamps: [], signals: [], parked: [], wires: [], wirePoles: [] }));
+    if (!t) out.set(k, (t = emptyTileProps()));
     return t;
   };
-  for (const key of ['trees', 'lamps', 'signals', 'parked', 'wirePoles'] as const) {
+  for (const key of ['trees', 'lamps', 'signals', 'parked', 'wirePoles', 'cones'] as const) {
     for (const item of all[key]) get(tileOf(item[0]!, item[2]!))[key].push(item);
   }
   for (const w of all.wires) get(tileOf(w[0]!, w[2]!)).wires.push(w);

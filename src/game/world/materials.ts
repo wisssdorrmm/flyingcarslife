@@ -14,7 +14,8 @@ export type PbrId =
   | 'dark_brick_wall'
   | 'white_stucco'
   | 'granite_tile'
-  | 'metal_plate';
+  | 'metal_plate'
+  | 'leafy_grass';
 
 export interface PbrOptions {
   /** Real-world size one texture tile covers (geometry UVs must be in meters). */

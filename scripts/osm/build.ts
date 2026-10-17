@@ -9,10 +9,12 @@ import { mkdir, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import {
   CITY_FORMAT_VERSION,
+  emptyTileProps,
   TILE_SIZE,
   tileKey,
   type CityIndex,
   type CityMap,
+  type HeightGrid,
   type RoadEdge,
   type TileEntry,
   type TileMeshName,
@@ -113,6 +115,24 @@ class Mask {
   }
 }
 
+/** 4 m drivable-surface grid over a tile (one sample past each edge), Int16 centimeters. */
+function tileHeightGrid(
+  ix: number,
+  iz: number,
+  height: (x: number, z: number) => number,
+): HeightGrid {
+  const step = 4;
+  const n = Math.round(TILE_SIZE / step) + 2;
+  const x0 = ix * TILE_SIZE - step;
+  const z0 = iz * TILE_SIZE - step;
+  const data = new Int16Array(n * n);
+  for (let k = 0; k < n; k++) {
+    for (let i = 0; i < n; i++)
+      data[k * n + i] = Math.round(height(x0 + i * step, z0 + k * step) * 100);
+  }
+  return { x0, z0, step, nx: n, nz: n, data: Buffer.from(data.buffer).toString('base64') };
+}
+
 const dm = (r: Ring) => r.flatMap(([x, z]) => [Math.round(x * 10), Math.round(z * 10)]);
 
 async function main(): Promise<void> {
@@ -193,6 +213,19 @@ async function main(): Promise<void> {
     `props: ${props.trees.length} trees, ${props.lamps.length} lamps, ${props.signals.length} signals, ${props.parked.length} parked cars`,
   );
 
+  // Graph nodes (needed by tiles: signal poles reference them).
+  const nodeIndex = new Map<number, number>();
+  const nodes: number[] = [];
+  for (const j of net.junctions.values()) {
+    nodeIndex.set(j.id, nodes.length / 3);
+    nodes.push(
+      Math.round(j.p[0] * 10) / 10,
+      Math.round(height(...j.p) * 10) / 10,
+      Math.round(j.p[1] * 10) / 10,
+    );
+  }
+  for (const sig of props.signals) sig[4] = nodeIndex.get(sig[4]!) ?? -1;
+
   // Tiles.
   const [ax, az] = project(BBOX.north, BBOX.west);
   const [bx, bz] = project(BBOX.south, BBOX.east);
@@ -229,25 +262,17 @@ async function main(): Promise<void> {
         markings: buildMarkings(net.edges, net.trams, height, inTile),
         buildings: buildBuildings(byTile.get(key) ?? [], { height, terrain, roads: roadIndex }),
       };
-      const tp = propTiles.get(key) ?? {
-        trees: [],
-        lamps: [],
-        signals: [],
-        parked: [],
-        wires: [],
-        wirePoles: [],
-      };
+      const tp = propTiles.get(key) ?? emptyTileProps();
       const tris = Object.values(meshes).reduce((s, m) => s + m.idx.length / 3, 0);
       if (!tris) continue;
-      const bin = encodeTile(ix, iz, meshes, tp, [
-        'asphalt',
-        'pavement',
-        'grass',
-        'sand',
-        'curb',
-        'pier',
-        'buildings',
-      ]);
+      const bin = encodeTile(
+        ix,
+        iz,
+        meshes,
+        tp,
+        ['asphalt', 'pavement', 'grass', 'sand', 'curb', 'pier', 'buildings'],
+        tileHeightGrid(ix, iz, height),
+      );
       const file = `tiles/${key}.bin`;
       await writeFile(join(OUT_DIR, file), bin);
       entries.push({ ix, iz, file, bytes: bin.length });
@@ -257,17 +282,7 @@ async function main(): Promise<void> {
   }
   if (only) return;
 
-  // Index: road graph, streets, spawn, height grid.
-  const nodeIndex = new Map<number, number>();
-  const nodes: number[] = [];
-  for (const j of net.junctions.values()) {
-    nodeIndex.set(j.id, nodes.length / 3);
-    nodes.push(
-      Math.round(j.p[0] * 10) / 10,
-      Math.round(height(...j.p) * 10) / 10,
-      Math.round(j.p[1] * 10) / 10,
-    );
-  }
+  // Index: streets, edges, spawn, height grid.
   const streets = [...new Set(net.edges.map((e) => e.road.name).filter(Boolean))].sort();
   const streetId = new Map(streets.map((s, i) => [s, i]));
   const edges: RoadEdge[] = net.edges.map((e) => ({
@@ -277,7 +292,10 @@ async function main(): Promise<void> {
     cls: e.road.cls,
     oneway: e.road.oneway,
     lanes: e.road.lanes,
+    lanesFwd: e.road.lanesFwd,
+    laneOffset: Math.round(e.road.laneOffset * 100) / 100,
     width: Math.round(e.road.width * 10) / 10,
+    bus: net.busWays.has(e.road.wayId),
     pts: e.pts.flatMap(([x, z]) => [Math.round(x * 10) / 10, Math.round(z * 10) / 10]),
     length: Math.round(e.length * 10) / 10,
   }));
@@ -329,6 +347,7 @@ async function main(): Promise<void> {
     streets,
     nodes,
     edges,
+    signals: [...net.junctions.values()].filter((j) => j.signal).map((j) => nodeIndex.get(j.id)!),
     height: {
       x0: hx0,
       z0: hz0,

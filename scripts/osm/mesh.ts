@@ -5,6 +5,7 @@ import {
   TILE_MAGIC,
   TILE_SIZE,
   type AttrInfo,
+  type HeightGrid,
   type MeshInfo,
   type TileHeader,
   type TileMeshName,
@@ -101,6 +102,7 @@ export function encodeTile(
   meshes: Partial<Record<TileMeshName, MeshBuilder>>,
   props: TileProps,
   colliders: TileMeshName[],
+  height: HeightGrid,
 ): Buffer {
   const w = new BufferWriter();
   const infos: Partial<Record<TileMeshName, MeshInfo>> = {};
@@ -156,6 +158,7 @@ export function encodeTile(
     iz,
     meshes: infos,
     props,
+    height,
     colliders,
   };
   const json = Buffer.from(JSON.stringify(header));
