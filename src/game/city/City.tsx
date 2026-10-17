@@ -4,6 +4,7 @@ import { CITY_STREAMING } from '../config';
 import { DrivableCar } from '../vehicles/DrivableCar';
 import { loadCity, preloadAround } from './cityData';
 import { CityTiles } from './CityTiles';
+import { GpsRoute } from './GpsRoute';
 import { Water } from './Water';
 
 async function loadCityWithSpawn() {
@@ -28,6 +29,7 @@ export function City() {
     <>
       <CityTiles city={city} onReady={onReady} />
       <Water />
+      <GpsRoute city={city} />
       {groundReady && (
         <DrivableCar
           id="player-car"

@@ -5,6 +5,7 @@
 import * as THREE from 'three';
 import { create } from 'zustand';
 import { assetUrl } from '../../lib/assets';
+import { RoadGraph } from './roadGraph';
 import {
   tileKey,
   CITY_FORMAT_VERSION,
@@ -19,6 +20,7 @@ import {
 
 export interface City {
   index: CityIndex;
+  graph: RoadGraph;
   /** Drivable-surface height (m) at world x/z, bilinear over the index's height grid. */
   heightAt(x: number, z: number): number;
 }
@@ -74,7 +76,7 @@ export function loadCity(): Promise<City> {
         g(i + 1, k + 1) * u * v
       );
     };
-    const city: City = { index, heightAt };
+    const city: City = { index, graph: new RoadGraph(index), heightAt };
     useCity.setState({ city });
     return city;
   });

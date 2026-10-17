@@ -1,11 +1,11 @@
 import { useEffect, useRef } from 'react';
 import { currentPose, useNav } from '../../game/store/nav';
-import { cityMapLayer, MAP_COLORS, MAP_SCALE, toLayer } from '../map/cityMapLayer';
+import { cityMapLayer, MAP_COLORS, MAP_SCALE } from '../map/cityMapLayer';
 import { formatDistance } from '../map/format';
 
 const SIZE = 168;
 /** Meters shown from the center to the edge. */
-const RANGE = 110;
+const RANGE = 160;
 
 /** Round, heading-up minimap with the GPS route; tap/click to open the full map. */
 export function Minimap() {
@@ -17,7 +17,6 @@ export function Minimap() {
     const c = canvas.current;
     const ctx = c?.getContext('2d');
     if (!c || !ctx) return;
-    const layer = cityMapLayer();
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     c.width = c.height = SIZE * dpr;
     let raf = 0;
@@ -37,21 +36,24 @@ export function Minimap() {
       ctx.beginPath();
       ctx.arc(r, r, r - 1, 0, Math.PI * 2);
       ctx.clip();
-      ctx.fillStyle = MAP_COLORS.background;
+      ctx.fillStyle = MAP_COLORS.water;
       ctx.fillRect(0, 0, SIZE, SIZE);
       // Heading up: rotate the world so the facing direction points to the top.
       ctx.translate(r, r);
       ctx.rotate(-Math.atan2(pose.fx, -pose.fz));
       const sx = (x: number) => (x - pose.x) * k;
       const sy = (z: number) => (z - pose.z) * k;
-      const s = k / MAP_SCALE;
-      ctx.drawImage(
-        layer,
-        -toLayer(pose.x) * s,
-        -toLayer(pose.z) * s,
-        layer.width * s,
-        layer.height * s,
-      );
+      const layer = cityMapLayer();
+      if (layer) {
+        const s = k / MAP_SCALE;
+        ctx.drawImage(
+          layer.canvas,
+          (layer.x0 - pose.x) * k,
+          (layer.z0 - pose.z) * k,
+          layer.canvas.width * s,
+          layer.canvas.height * s,
+        );
+      }
       if (nav.route.length > 1) {
         ctx.strokeStyle = MAP_COLORS.route;
         ctx.lineWidth = 4;

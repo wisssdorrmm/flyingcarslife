@@ -1,12 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { cityPlaces, type Place } from '../../game/places/placement';
+import { useCity } from '../../game/city/cityData';
+import { DISTRICTS, districtAt, LANDMARKS, type Landmark } from '../../game/city/geo';
 import { currentPose, useNav } from '../../game/store/nav';
-import { DISTRICTS, districtAt, PITCH, ROADS } from '../../game/world/cityPlan';
-import { snapToRoad } from '../../game/world/navGraph';
-import { cityMapLayer, MAP_COLORS, MAP_HALF, MAP_SCALE, PLACE_ICON } from './cityMapLayer';
+import { cityMapLayer, MAP_COLORS, MAP_SCALE } from './cityMapLayer';
 import { formatDistance } from './format';
 
-const placeName = (p: Place) => p.name.replace(/—.*$/, '').trim();
+interface StreetLabel {
+  name: string;
+  x: number;
+  z: number;
+  angle: number;
+  length: number;
+}
 
 interface View {
   /** World point at the center of the screen. */
@@ -16,7 +21,7 @@ interface View {
   zoom: number;
 }
 
-/** Full-screen city map: pan/zoom, click a place or a street to set a GPS waypoint. */
+/** Full-screen city map: pan/zoom, tap a landmark or any street to set a GPS waypoint. */
 export function MapScreen() {
   const open = useNav((s) => s.mapOpen);
   const setOpen = useNav((s) => s.setMapOpen);
@@ -26,7 +31,31 @@ export function MapScreen() {
   const [query, setQuery] = useState('');
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const view = useRef<View>({ cx: 0, cz: 0, zoom: 1 });
-  const places = useMemo(() => cityPlaces(), []);
+  const city = useCity((s) => s.city);
+  const places = LANDMARKS;
+  // One label per long named stretch, placed at its middle and turned along the road.
+  const labels = useMemo<StreetLabel[]>(() => {
+    if (!city) return [];
+    const out: StreetLabel[] = [];
+    city.index.edges.forEach((e, i) => {
+      if (e.name < 0 || e.length < 70) return;
+      const n = e.pts.length / 2;
+      const m = Math.floor(n / 2);
+      const a = Math.max(0, m - 1);
+      const b = Math.min(n - 1, m + 1 > n - 1 ? m : m + 1);
+      let angle = Math.atan2(e.pts[b * 2 + 1]! - e.pts[a * 2 + 1]!, e.pts[b * 2]! - e.pts[a * 2]!);
+      if (angle > Math.PI / 2) angle -= Math.PI;
+      if (angle < -Math.PI / 2) angle += Math.PI;
+      out.push({
+        name: city.graph.streetName(i),
+        x: e.pts[m * 2]!,
+        z: e.pts[m * 2 + 1]!,
+        angle,
+        length: e.length,
+      });
+    });
+    return out;
+  }, [city]);
 
   // Toggle with M anywhere (unless typing), close with Escape.
   useEffect(() => {
@@ -44,7 +73,7 @@ export function MapScreen() {
     if (!open) return;
     const pose = currentPose();
     const short = Math.min(window.innerWidth, window.innerHeight);
-    view.current = { cx: pose?.x ?? 0, cz: pose?.z ?? 0, zoom: short / 520 };
+    view.current = { cx: pose?.x ?? 0, cz: pose?.z ?? 0, zoom: short / 700 };
   }, [open]);
 
   // Draw loop while open (no React re-renders per frame).
@@ -53,7 +82,6 @@ export function MapScreen() {
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext('2d');
     if (!canvas || !ctx) return;
-    const layer = cityMapLayer();
     let raf = 0;
     const draw = () => {
       raf = requestAnimationFrame(draw);
@@ -68,43 +96,40 @@ export function MapScreen() {
       const sx = (x: number) => (x - v.cx) * v.zoom + w / 2;
       const sy = (z: number) => (z - v.cz) * v.zoom + h / 2;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      ctx.fillStyle = MAP_COLORS.background;
+      ctx.fillStyle = MAP_COLORS.water;
       ctx.fillRect(0, 0, w, h);
       // Cached city image.
       ctx.imageSmoothingEnabled = true;
       const k = v.zoom / MAP_SCALE;
-      ctx.drawImage(layer, sx(-MAP_HALF), sy(-MAP_HALF), layer.width * k, layer.height * k);
+      const layer = cityMapLayer();
+      if (layer) {
+        ctx.drawImage(
+          layer.canvas,
+          sx(layer.x0),
+          sy(layer.z0),
+          layer.canvas.width * k,
+          layer.canvas.height * k,
+        );
+      }
 
       // District names (large, faint).
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.font = `700 ${Math.max(14, 28 * Math.min(v.zoom, 1.4))}px system-ui, sans-serif`;
       ctx.fillStyle = 'rgba(232, 237, 242, 0.16)';
-      const spots: Record<string, [number, number]> = {
-        downtown: [55, 55],
-        waterfront: [55, -2.6 * PITCH],
-        westside: [-2.6 * PITCH, 55],
-        eastgate: [2.6 * PITCH, 55],
-        southside: [55, 2.6 * PITCH],
-      };
-      for (const [id, [x, z]] of Object.entries(spots)) {
-        ctx.fillText(DISTRICTS[id as keyof typeof DISTRICTS].name.toUpperCase(), sx(x), sy(z));
-      }
+      for (const d of DISTRICTS) ctx.fillText(d.name.toUpperCase(), sx(d.x), sy(d.z));
 
       // Street names once zoomed in enough to read them.
-      if (v.zoom > 0.55) {
-        ctx.font = `600 ${Math.min(13, 9 + v.zoom * 2)}px system-ui, sans-serif`;
+      if (v.zoom > 0.9) {
+        ctx.font = `600 ${Math.min(13, 8 + v.zoom * 2)}px system-ui, sans-serif`;
         ctx.fillStyle = 'rgba(232, 237, 242, 0.85)';
-        for (const r of ROADS) {
-          for (let u = -2.5 * PITCH; u <= 2.5 * PITCH; u += PITCH) {
-            const x = r.axis === 'x' ? u : r.coord;
-            const z = r.axis === 'x' ? r.coord : u;
-            ctx.save();
-            ctx.translate(sx(x), sy(z));
-            if (r.axis === 'z') ctx.rotate(-Math.PI / 2);
-            ctx.fillText(r.name, 0, 0);
-            ctx.restore();
-          }
+        for (const l of labels) {
+          if (l.length * v.zoom < ctx.measureText(l.name).width + 12) continue;
+          ctx.save();
+          ctx.translate(sx(l.x), sy(l.z));
+          ctx.rotate(l.angle);
+          ctx.fillText(l.name, 0, 0);
+          ctx.restore();
         }
       }
 
@@ -120,25 +145,25 @@ export function MapScreen() {
         ctx.stroke();
       }
 
-      // Places.
-      const r = 11;
+      // Landmarks.
+      const r = 9;
       for (const p of places) {
-        const x = sx(p.door.x);
-        const y = sy(p.door.z);
+        const x = sx(p.x);
+        const y = sy(p.z);
         ctx.beginPath();
         ctx.arc(x, y, r, 0, Math.PI * 2);
-        ctx.fillStyle = p.sign.background;
+        ctx.fillStyle = 'rgba(12, 18, 24, 0.85)';
         ctx.fill();
-        ctx.strokeStyle = p.sign.accent;
+        ctx.strokeStyle = MAP_COLORS.route;
         ctx.lineWidth = 2;
         ctx.stroke();
-        ctx.font = '12px system-ui, sans-serif';
+        ctx.font = '11px system-ui, sans-serif';
         ctx.fillStyle = '#fff';
-        ctx.fillText(PLACE_ICON[p.type] ?? '•', x, y + 1);
-        if (v.zoom > 1.8) {
+        ctx.fillText('★', x, y + 1);
+        if (v.zoom > 0.7) {
           ctx.font = '600 11px system-ui, sans-serif';
           ctx.fillStyle = 'rgba(232, 237, 242, 0.95)';
-          ctx.fillText(placeName(p), x, y + r + 10);
+          ctx.fillText(p.name, x, y + r + 10);
         }
       }
 
@@ -180,7 +205,7 @@ export function MapScreen() {
     };
     draw();
     return () => cancelAnimationFrame(raf);
-  }, [open, places]);
+  }, [open, places, labels]);
 
   // Pan, zoom (wheel + pinch) and tap-to-set-waypoint.
   const pointers = useRef(new Map<number, { x: number; y: number }>());
@@ -198,28 +223,49 @@ export function MapScreen() {
   const zoomAt = (factor: number, clientX: number, clientY: number) => {
     const before = toWorld(clientX, clientY);
     const v = view.current;
-    v.zoom = Math.min(6, Math.max(0.25, v.zoom * factor));
+    v.zoom = Math.min(6, Math.max(0.15, v.zoom * factor));
     const after = toWorld(clientX, clientY);
     v.cx += before.x - after.x;
     v.cz += before.z - after.z;
   };
+  const goTo = (p: Landmark) => setWaypoint({ x: p.x, z: p.z, label: p.name });
   const tap = (clientX: number, clientY: number) => {
     const p = toWorld(clientX, clientY);
     const hitRadius = 16 / view.current.zoom;
-    const place = places.find((pl) => Math.hypot(pl.door.x - p.x, pl.door.z - p.z) < hitRadius);
+    const place = places.find((pl) => Math.hypot(pl.x - p.x, pl.z - p.z) < hitRadius);
     if (place) {
-      setWaypoint({ x: place.door.x, z: place.door.z, label: placeName(place) });
+      goTo(place);
       return;
     }
-    const s = snapToRoad(p.x, p.z);
-    setWaypoint({ x: s.x, z: s.z, label: `${s.road.name}, ${districtAt(s.x, s.z).name}` });
+    const hit = city?.graph.nearest(p.x, p.z, 80);
+    if (!hit) return;
+    const street = city!.graph.streetName(hit.edge) || 'Street';
+    setWaypoint({ x: hit.x, z: hit.z, label: `${street}, ${districtAt(hit.x, hit.z).name}` });
   };
 
   if (!open) return null;
 
-  const filtered = places.filter((p) =>
-    `${p.name} ${p.tagline} ${p.type}`.toLowerCase().includes(query.toLowerCase()),
-  );
+  const q = query.trim().toLowerCase();
+  const filtered = places.filter((p) => `${p.name} ${p.blurb}`.toLowerCase().includes(q));
+  // Typing a street name finds it too.
+  const streets =
+    q.length >= 2 && city
+      ? city.index.streets.filter((n) => n.toLowerCase().includes(q)).slice(0, 8)
+      : [];
+  const goToStreet = (name: string) => {
+    if (!city) return;
+    const id = city.index.streets.indexOf(name);
+    const e = city.index.edges
+      .filter((ed) => ed.name === id)
+      .sort((a, b) => b.length - a.length)[0];
+    if (!e) return;
+    const m = Math.floor(e.pts.length / 4) * 2;
+    const x = e.pts[m]!;
+    const z = e.pts[m + 1]!;
+    setWaypoint({ x, z, label: `${name}, ${districtAt(x, z).name}` });
+    view.current.cx = x;
+    view.current.cz = z;
+  };
 
   return (
     <div className="map-screen" role="dialog" aria-label="City map">
@@ -270,7 +316,7 @@ export function MapScreen() {
 
       <aside className="map-panel">
         <header>
-          <h2>Harbor City</h2>
+          <h2>San Francisco</h2>
           <button className="panel-close" onClick={() => setOpen(false)} aria-label="Close map">
             ×
           </button>
@@ -284,32 +330,37 @@ export function MapScreen() {
             <button onClick={() => setWaypoint(null)}>Clear</button>
           </div>
         ) : (
-          <p className="map-hint">Tap a place or any street to set a GPS route.</p>
+          <p className="map-hint">Tap a landmark or any street to set a GPS route.</p>
         )}
         <input
           className="map-search"
-          placeholder="Search places…"
+          placeholder="Search landmarks or streets…"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
         <ul className="map-places">
+          {streets.map((name) => (
+            <li key={`street-${name}`}>
+              <span className="map-icon">🛣</span>
+              <span className="map-place-text">
+                <strong>{name}</strong>
+                <em>Street</em>
+              </span>
+              <button onClick={() => goToStreet(name)}>Go</button>
+            </li>
+          ))}
           {filtered.map((p) => (
             <li key={p.id}>
-              <span
-                className="map-icon"
-                style={{ background: p.sign.background, borderColor: p.sign.accent }}
-              >
-                {PLACE_ICON[p.type] ?? '•'}
-              </span>
+              <span className="map-icon">★</span>
               <span className="map-place-text">
-                <strong>{placeName(p)}</strong>
-                <em>{p.tagline}</em>
+                <strong>{p.name}</strong>
+                <em>{p.blurb}</em>
               </span>
               <button
                 onClick={() => {
-                  setWaypoint({ x: p.door.x, z: p.door.z, label: placeName(p) });
-                  view.current.cx = p.door.x;
-                  view.current.cz = p.door.z;
+                  goTo(p);
+                  view.current.cx = p.x;
+                  view.current.cz = p.z;
                 }}
               >
                 Go
@@ -317,6 +368,7 @@ export function MapScreen() {
             </li>
           ))}
         </ul>
+        <p className="map-credit">Map data © OpenStreetMap contributors</p>
         <p className="map-keys">M or Esc to close · drag to pan · scroll / pinch to zoom</p>
       </aside>
     </div>
