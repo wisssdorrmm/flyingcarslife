@@ -1,11 +1,14 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { suspend } from 'suspend-react';
 import { CITY_STREAMING } from '../config';
 import { RooftopCarPark } from '../debug/RooftopCarPark';
 import { carParkBase, carParkWaypoint } from '../debug/carParkLayout';
 import { useTestScene } from '../debug/testScenes';
 import { PoliceChaser } from '../police/PoliceChaser';
+import { usePlayerCar } from '../store/playerCar';
 import { DrivableCar } from '../vehicles/DrivableCar';
+import { Hijack } from '../vehicles/Hijack';
+import { LeftCars } from '../vehicles/LeftCars';
 import { Pedestrians } from '../npc/Pedestrians';
 import { Traffic } from '../traffic/Traffic';
 import { TireFx } from '../vehicles/TireFx';
@@ -34,6 +37,19 @@ export function City() {
   const [groundReady, setGroundReady] = useState(false);
   const onReady = useCallback(() => setGroundReady(true), []);
   const chaser = useTestScene((t) => t.chaser);
+  // The player starts in their flying car at the spawn point; hijacking swaps it (store/playerCar).
+  const car = usePlayerCar((p) => p.car);
+  useEffect(() => {
+    if (usePlayerCar.getState().car) return;
+    usePlayerCar.getState().setCar({
+      model: 'ev',
+      paint: '#eceef0',
+      canFly: true,
+      position: [s.x, s.y + 0.6, s.z],
+      heading: s.heading,
+      speed: 0,
+    });
+  }, [s]);
   return (
     <>
       <CityTiles city={city} onReady={onReady} />
@@ -42,7 +58,7 @@ export function City() {
       <RooftopCarPark city={city} />
       {groundReady && chaser && (
         <PoliceChaser
-          key={chaser.key}
+          key={`chaser-${chaser.key}`}
           start={chaser.start}
           heading={chaser.heading}
           nav={(p, target) => carParkWaypoint(carParkBase(city), p, target)}
@@ -52,12 +68,18 @@ export function City() {
       <TireFx />
       {groundReady && <Traffic city={city} />}
       {groundReady && <Pedestrians city={city} />}
-      {groundReady && (
+      <LeftCars />
+      {groundReady && <Hijack city={city} />}
+      {groundReady && car && (
         <DrivableCar
+          key={`car-${car.key}`}
           id="player-car"
-          position={[s.x, s.y + 0.6, s.z]}
-          heading={s.heading}
-          paint="#eceef0"
+          position={car.position}
+          heading={car.heading}
+          paint={car.paint}
+          model={car.model}
+          canFly={car.canFly}
+          initialSpeed={car.speed}
         />
       )}
     </>

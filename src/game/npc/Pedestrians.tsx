@@ -17,7 +17,7 @@ import { useSettings } from '../store/settings';
 import { useUi } from '../store/ui';
 import { vehicleState } from '../vehicles/vehicleState';
 import { launchHooks } from '../vehicles/flight';
-import { PedSim, type Ped } from './pedSim';
+import { PedSim, pedRef, type Ped } from './pedSim';
 import { applyLookPose, findLookBones, type LookPose } from './pose';
 
 /** Clothing tints (multiplied over the character's texture). */
@@ -49,7 +49,11 @@ export function Pedestrians({ city }: { city: City }) {
   const animGltf = useGLTF(modelUrl(ANIMATION_SOURCE), false, true);
   const sim = useMemo(() => new PedSim(city.index), [city]);
   useEffect(() => {
+    pedRef.sim = sim;
     if (useSettings.getState().debug) Object.assign(window, { __peds: sim });
+    return () => {
+      if (pedRef.sim === sim) pedRef.sim = null;
+    };
   }, [sim]);
   const root = useRef<THREE.Group>(null);
   const avatars = useRef(new Map<Ped, Avatar>());
@@ -158,14 +162,19 @@ export function Pedestrians({ city }: { city: City }) {
         if (e.cls === 'service' || e.length < 25) continue;
         const m = Math.floor(e.pts.length / 4) * 2;
         const d = Math.hypot(e.pts[m]! - focus.x, e.pts[m + 1]! - focus.z);
-        if (d >= PEDESTRIANS.spawnMin * 0.5 && d <= PEDESTRIANS.spawnMax) nearby.current.edges.push(ei);
+        if (d >= PEDESTRIANS.spawnMin * 0.5 && d <= PEDESTRIANS.spawnMax)
+          nearby.current.edges.push(ei);
       }
     }
     spawnTimer.current -= dt;
     const list = nearby.current.edges;
     if (spawnTimer.current <= 0 && list.length && sim.peds.length < PEDESTRIANS.count[tier]) {
       spawnTimer.current = 0.12;
-      const p = sim.spawn(list[Math.floor(Math.random() * list.length)]!, Math.random(), Math.random);
+      const p = sim.spawn(
+        list[Math.floor(Math.random() * list.length)]!,
+        Math.random(),
+        Math.random,
+      );
       avatars.current.set(p, makeAvatar(p));
     }
 
@@ -179,8 +188,12 @@ export function Pedestrians({ city }: { city: City }) {
         sim.remove(p);
         continue;
       }
-      const a = avatars.current.get(p);
-      if (!a) continue;
+      // People added by other systems (a carjacked driver) get their figure here.
+      let a = avatars.current.get(p);
+      if (!a) {
+        a = makeAvatar(p);
+        avatars.current.set(p, a);
+      }
       a.holder.position.set(p.x, city.heightAt(p.x, p.z) + CURB, p.z);
       a.holder.rotation.y = p.heading;
       // Knocked down: tip over onto the back; ease back up afterwards.

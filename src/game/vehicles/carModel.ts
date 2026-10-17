@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { parkedCarGeometries, policeCarGeometries } from '../city/propModels';
 import { extractParts } from '../world/instancing';
 
 /** The "Flying Car" brand EV (Khronos CarConcept, rebadged in the asset pipeline). Front faces +z. */
@@ -116,6 +117,10 @@ export interface CarRig {
   wheels: CarWheel[];
   /** Driver door, pivoting about its hinge (rotate around y to open). */
   driverDoor: THREE.Group | null;
+  /** Wheel radius (m), when it differs from VEHICLE.wheelRadius. */
+  wheelRadius?: number;
+  /** Body meshes that can be dented (geometry unique to this car, in the car's frame). */
+  bodyMeshes: THREE.Mesh[];
 }
 
 /** Re-parents `node` under a new axis-aligned pivot at the node's world position. */
@@ -167,6 +172,69 @@ export function buildDrivableCar(source: THREE.Object3D, look: CarLook): CarRig 
     });
   }
 
-  root.add(mergeByMaterial(scene, remap), ...movers);
-  return { root, wheels, driverDoor };
+  const body = mergeByMaterial(scene, remap);
+  root.add(body, ...movers);
+  const bodyMeshes = body.children.filter((c): c is THREE.Mesh => (c as THREE.Mesh).isMesh);
+  return { root, wheels, driverDoor, bodyMeshes };
+}
+
+/**
+ * The everyday low-poly car from traffic, as a drivable rig (what you get when you hijack one):
+ * painted body, dark glass, and four wheels on their own steer/spin pivots.
+ */
+export function buildSimpleCarRig(look: CarLook, police = false): CarRig {
+  const g = parkedCarGeometries();
+  const root = new THREE.Group();
+  root.name = 'drivable-sedan';
+  const body = new THREE.Mesh(
+    g.body,
+    new THREE.MeshStandardMaterial({ color: look.paint, roughness: 0.35, metalness: 0.3 }),
+  );
+  const glass = new THREE.Mesh(
+    g.glass,
+    new THREE.MeshStandardMaterial({ color: '#101418', roughness: 0.08, metalness: 0.2 }),
+  );
+  body.castShadow = glass.castShadow = true;
+  body.receiveShadow = true;
+  root.add(body, glass);
+  if (police) {
+    // White doors and a (dark) light bar: a taken police cruiser keeps its look.
+    const p = policeCarGeometries();
+    root.add(
+      new THREE.Mesh(p.doors, new THREE.MeshStandardMaterial({ color: '#f4f4f2', roughness: 0.4 })),
+      new THREE.Mesh(
+        p.lightbar,
+        new THREE.MeshStandardMaterial({ color: '#2a2c30', roughness: 0.5 }),
+      ),
+      new THREE.Mesh(p.red, new THREE.MeshStandardMaterial({ color: '#7a1218', roughness: 0.4 })),
+      new THREE.Mesh(p.blue, new THREE.MeshStandardMaterial({ color: '#132d73', roughness: 0.4 })),
+    );
+  }
+  const tire = new THREE.MeshStandardMaterial({ color: '#16171a', roughness: 0.8 });
+  const rim = new THREE.MeshStandardMaterial({ color: '#b9bec4', roughness: 0.35, metalness: 0.8 });
+  const wheels: CarWheel[] = [];
+  for (const [x, z, front] of [
+    [0.78, 1.35, true],
+    [-0.78, 1.35, true],
+    [0.78, -1.32, false],
+    [-0.78, -1.32, false],
+  ] as const) {
+    const pivot = new THREE.Group();
+    pivot.position.set(x, 0.33, z);
+    const spin = new THREE.Group();
+    const t = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.33, 0.33, 0.24, 16).rotateZ(Math.PI / 2),
+      tire,
+    );
+    const hub = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.2, 0.2, 0.25, 10).rotateZ(Math.PI / 2),
+      rim,
+    );
+    t.castShadow = true;
+    spin.add(t, hub);
+    pivot.add(spin);
+    root.add(pivot);
+    wheels.push({ pivot, spin, center: pivot.position.clone(), front });
+  }
+  return { root, wheels, driverDoor: null, wheelRadius: 0.33, bodyMeshes: [body, glass] };
 }

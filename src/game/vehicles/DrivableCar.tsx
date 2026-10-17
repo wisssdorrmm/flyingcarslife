@@ -8,7 +8,7 @@ import {
   useRapier,
   type RapierRigidBody,
 } from '@react-three/rapier';
-import type { DynamicRayCastVehicleController } from '@dimforge/rapier3d-compat';
+import type { Collider, DynamicRayCastVehicleController } from '@dimforge/rapier3d-compat';
 import * as THREE from 'three';
 import { modelUrl } from '../../lib/assets';
 import { playWhoosh, stopEvSound, updateEvSound } from '../audio/evSound';
@@ -17,12 +17,14 @@ import { useGame } from '../store/game';
 import { useNav } from '../store/nav';
 import { useCity } from '../city/cityData';
 import { useCareer } from '../store/career';
+import type { PlayerCarModel } from '../store/playerCar';
 import { toast } from '../store/toasts';
 import { useSettings } from '../store/settings';
 import { consumePress, input, readMove } from '../systems/input';
 import { ArcadeCar } from './arcadeHandling';
 import { carContactHooks } from './contacts';
-import { buildDrivableCar, CAR_MODEL, type CarLook } from './carModel';
+import { buildDrivableCar, buildSimpleCarRig, CAR_MODEL, type CarLook } from './carModel';
+import { CarDeformer } from './deform';
 import { crashDrift, updateDrift } from './drift';
 import { FlightController, timeUpHooks } from './flight';
 import { emitDust, emitSparks, setTireEmitter } from './tireFxState';
@@ -33,9 +35,27 @@ interface Props extends CarLook {
   position: [number, number, number];
   /** Heading in radians; 0 faces +z. */
   heading: number;
+  /** The flying car (detailed EV), or an ordinary car taken from traffic. */
+  model?: PlayerCarModel;
+  /** Only flying cars can rocket-launch. */
+  canFly?: boolean;
+  /** Speed (m/s) the car starts with, along its heading (taking over a moving car). */
+  initialSpeed?: number;
 }
 
 const HUD_INTERVAL = 0.1;
+
+/** Where a hit landed when the contact manifold isn't available: the body edge facing the force. */
+function fallbackImpact(
+  force: { x: number; y: number; z: number },
+  inv: THREE.Quaternion,
+): THREE.Vector3 {
+  // The force pushes the car away from what it hit, so the contact is on the opposite side.
+  const d = new THREE.Vector3(-force.x, 0, -force.z).applyQuaternion(inv).setY(0).normalize();
+  const sx = Math.abs(d.x) > 1e-3 ? 0.95 / Math.abs(d.x) : Infinity;
+  const sz = Math.abs(d.z) > 1e-3 ? 2.2 / Math.abs(d.z) : Infinity;
+  return d.multiplyScalar(Math.min(sx, sz)).setY(0.6);
+}
 
 /** R: put the car back on its wheels on the nearest road, facing along it. */
 function resetOntoRoad(rb: RapierRigidBody): void {
@@ -74,9 +94,24 @@ const STATIC_COMPRESSION = Math.abs(PHYSICS.gravity[1]) / (4 * VEHICLE.suspensio
 const MOUNT_OFFSET = VEHICLE.suspensionRestLength - STATIC_COMPRESSION;
 const MS_TO_UNITS = HUD_UNITS === 'mph' ? 2.23694 : 3.6;
 
-export function DrivableCar({ id, position, heading, paint }: Props) {
+export function DrivableCar({
+  id,
+  position,
+  heading,
+  paint,
+  model = 'ev',
+  canFly = true,
+  initialSpeed = 0,
+}: Props) {
   const gltf = useGLTF(modelUrl(CAR_MODEL), false, true);
-  const rig = useMemo(() => buildDrivableCar(gltf.scene, { paint }), [gltf, paint]);
+  const rig = useMemo(
+    () =>
+      model === 'ev'
+        ? buildDrivableCar(gltf.scene, { paint })
+        : buildSimpleCarRig({ paint }, model === 'police'),
+    [gltf, paint, model],
+  );
+  const deformer = useMemo(() => new CarDeformer(rig.bodyMeshes), [rig]);
   const chassis = useRef<RapierRigidBody>(null);
   const visual = useRef<THREE.Group>(null);
   const { world, rapier } = useRapier();
@@ -87,12 +122,11 @@ export function DrivableCar({ id, position, heading, paint }: Props) {
     throttle: 0,
     battery: 100,
     damage: 0,
-    /** Constant pull direction once damaged (±1). */
-    pullSide: Math.random() < 0.5 ? -1 : 1,
     doorOpen: 0,
     doorTarget: 0,
     doorTimer: 0,
     hudTimer: 0,
+    noFlyToast: 0,
   });
 
   useEffect(() => {
@@ -107,7 +141,7 @@ export function DrivableCar({ id, position, heading, paint }: Props) {
         { x: 0, y: -1, z: 0 },
         { x: -1, y: 0, z: 0 },
         VEHICLE.suspensionRestLength,
-        VEHICLE.wheelRadius,
+        rig.wheelRadius ?? VEHICLE.wheelRadius,
       );
     }
     for (let i = 0; i < vc.numWheels(); i++) {
@@ -194,7 +228,12 @@ export function DrivableCar({ id, position, heading, paint }: Props) {
         flight.reset(rb);
         resetOntoRoad(rb);
       }
-      if (consumePress('attack') && !flight.airborne && s.battery > FLYING.launchCost) {
+      const launch = consumePress('attack');
+      if (launch && !canFly && performance.now() - s.noFlyToast > 3000) {
+        s.noFlyToast = performance.now();
+        toast('Only flying cars can launch: get back in yours', 'warn');
+      }
+      if (launch && canFly && !flight.airborne && s.battery > FLYING.launchCost) {
         if (flight.launch(rb)) {
           s.battery -= FLYING.launchCost;
           playWhoosh();
@@ -238,12 +277,10 @@ export function DrivableCar({ id, position, heading, paint }: Props) {
     const power =
       (1 - (s.damage / 100) * (1 - VEHICLE.damagedEngineFactor)) * (s.battery > 0 ? 1 : 0);
 
-    // Front wheel angle (visual + a little real steering), with a pull once damaged.
+    // Front wheel angle (visual + a little real steering). Damage is cosmetic: no pull to one side.
     const t = THREE.MathUtils.clamp(Math.abs(speed) / VEHICLE.highSpeedSteerAt, 0, 1);
     const steerScale = THREE.MathUtils.lerp(1, VEHICLE.highSpeedSteerFactor, t);
-    const pull =
-      (s.damage / 100) * VEHICLE.damagedSteerPull * s.pullSide * Math.min(1, Math.abs(speed) / 5);
-    const target = -steerIn * VEHICLE.maxSteer * steerScale + pull;
+    const target = -steerIn * VEHICLE.maxSteer * steerScale;
     const maxStep = VEHICLE.steerRate * dt;
     s.steer += THREE.MathUtils.clamp(target - s.steer, -maxStep, maxStep);
 
@@ -253,7 +290,7 @@ export function DrivableCar({ id, position, heading, paint }: Props) {
       fronts,
       {
         throttle: throttleIn,
-        steer: steerIn - pull / VEHICLE.maxSteer,
+        steer: steerIn,
         handbrake,
         shiftUp,
         shiftDown,
@@ -278,11 +315,16 @@ export function DrivableCar({ id, position, heading, paint }: Props) {
   const onContactForce = (e: {
     totalForceMagnitude: number;
     maxForceDirection: { x: number; y: number; z: number };
-    other: { rigidBody?: { handle: number } };
+    target: { collider: Collider };
+    other: { rigidBody?: { handle: number }; collider: Collider };
   }) => {
     // Settling onto the road after spawning isn't a crash.
     if (performance.now() - spawnedAt.current < 2500) return;
     const impulse = e.totalForceMagnitude * PHYSICS.timeStep;
+    if (useSettings.getState().debug) {
+      const w = window as unknown as { __maxImpulse?: number };
+      w.__maxImpulse = Math.max(w.__maxImpulse ?? 0, impulse);
+    }
     const other = e.other.rigidBody?.handle;
     if (other !== undefined) for (const hook of carContactHooks) hook(other, impulse);
     const rb = chassis.current;
@@ -291,7 +333,24 @@ export function DrivableCar({ id, position, heading, paint }: Props) {
     }
     if (impulse > VEHICLE.damageThreshold * 0.6) crashDrift();
     // Scraping the road during the nose-up / tumbling launch isn't a crash.
-    if (flight.launching) return;
+    if (flight.launching || !rb) return;
+    // Crumple the body where it actually touched (contact points from the manifold).
+    if (impulse > VEHICLE.damageThreshold * 0.35) {
+      const strength = (impulse - VEHICLE.damageThreshold * 0.35) / (VEHICLE.damageThreshold * 1.6);
+      const t = rb.translation();
+      const r = rb.rotation();
+      const inv = new THREE.Quaternion(r.x, r.y, r.z, r.w).invert();
+      let hit: THREE.Vector3 | null = null;
+      world.contactPair(e.target.collider, e.other.collider, (manifold) => {
+        if (hit || manifold.numSolverContacts() === 0) return;
+        const p = manifold.solverContactPoint(0);
+        hit = new THREE.Vector3(p.x - t.x, p.y - t.y, p.z - t.z).applyQuaternion(inv);
+      });
+      const point: THREE.Vector3 = hit ?? fallbackImpact(e.maxForceDirection, inv);
+      // Push toward the car's middle (at body height).
+      const dir = new THREE.Vector3(-point.x, 0.75 - point.y, 0.2 - point.z);
+      if (point.y > 0.15) deformer.hit(point, dir, strength);
+    }
     if (impulse > VEHICLE.damageThreshold) {
       const s = sim.current;
       s.damage = Math.min(
@@ -326,13 +385,21 @@ export function DrivableCar({ id, position, heading, paint }: Props) {
       },
     };
     useGame.getState().enterVehicle(id);
+    if (initialSpeed) {
+      rb.setLinvel(
+        { x: Math.sin(heading) * initialSpeed, y: 0, z: Math.cos(heading) * initialSpeed },
+        true,
+      );
+    }
     // Debug hook for automated handling checks.
-    if (useSettings.getState().debug) Object.assign(window, { __drive: arcade.telemetry });
+    if (useSettings.getState().debug) {
+      Object.assign(window, { __drive: arcade.telemetry, __deform: deformer });
+    }
     return () => {
       if (vehicleState.active?.id === id) vehicleState.active = null;
       stopEvSound();
     };
-  }, [id, paint, arcade, flight]);
+  }, [id, paint, arcade, flight, heading, initialSpeed, deformer]);
 
   useFrame((_, dt) => {
     const vc = vehicle.current;
@@ -341,6 +408,7 @@ export function DrivableCar({ id, position, heading, paint }: Props) {
     if (!vc || !rb || !root) return;
     const s = sim.current;
     const game = useGame.getState();
+    deformer.tick(dt);
 
     // Wheels: suspension travel, steering and spin (left as they are while airborne).
     if (!flight.airborne) {

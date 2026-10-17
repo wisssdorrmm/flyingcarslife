@@ -117,6 +117,34 @@ export class PedSim {
     return p;
   }
 
+  /**
+   * Someone jumping out of a car at (x, z) and running off in direction (fx, fz) (a carjacked
+   * driver). They join the nearest sidewalk afterwards.
+   */
+  spawnFleeing(x: number, z: number, fx: number, fz: number, rand: () => number): Ped {
+    let best = 0;
+    let bestD = Infinity;
+    this.edges.forEach((e, i) => {
+      if (e.cls === 'service') return;
+      const m = Math.floor(e.pts.length / 4) * 2;
+      const d = Math.hypot(e.pts[m]! - x, e.pts[m + 1]! - z);
+      if (d < bestD) {
+        best = i;
+        bestD = d;
+      }
+    });
+    const p = this.spawn(best, 0.5, rand);
+    const l = Math.hypot(fx, fz) || 1;
+    p.x = x;
+    p.z = z;
+    p.fx = fx / l;
+    p.fz = fz / l;
+    p.heading = Math.atan2(p.fx, p.fz);
+    p.state = 'flee';
+    p.timer = 3.5;
+    return p;
+  }
+
   remove(p: Ped): void {
     const i = this.peds.indexOf(p);
     if (i >= 0) this.peds.splice(i, 1);
@@ -224,3 +252,6 @@ export class PedSim {
     }
   }
 }
+
+/** The running pedestrian simulation, for other systems (hijacking spawns the fleeing driver). */
+export const pedRef: { sim: PedSim | null } = { sim: null };

@@ -148,6 +148,7 @@ export function Traffic({ city }: { city: City }) {
   const e = useMemo(() => new THREE.Euler(0, 0, 0, 'YXZ'), []);
   const p = useMemo(() => new THREE.Vector3(), []);
   const one = useMemo(() => new THREE.Vector3(1, 1, 1), []);
+  const crushed = useMemo(() => new THREE.Vector3(1.04, 0.86, 0.9), []);
 
   useFrame((_, rawDt) => {
     const dt = Math.min(rawDt, 0.1);
@@ -181,6 +182,9 @@ export function Traffic({ city }: { city: City }) {
 
     // Step the simulation with the player as an obstacle.
     sim.step(dt, [{ x: focus.x, z: focus.z, v: Math.max(0, car.speed) }], rand);
+
+    // Bodies of cars taken out of the sim elsewhere (hijacked) go too.
+    for (const a of [...bodies.current.keys()]) if (!sim.agents.includes(a)) removeBody(a);
 
     // Despawn far cars and old wrecks; manage collision bodies.
     for (const a of [...sim.agents]) {
@@ -223,7 +227,8 @@ export function Traffic({ city }: { city: City }) {
           body.setNextKinematicRotation({ x: q.x, y: q.y, z: q.z, w: q.w });
         }
       }
-      m4.compose(p, q, one);
+      // Wrecks look crushed.
+      m4.compose(p, q, a.wrecked ? crushed : one);
       if (a.police) {
         const i = counts.cop++;
         if (i >= meshes.copBody.instanceMatrix.count) continue;

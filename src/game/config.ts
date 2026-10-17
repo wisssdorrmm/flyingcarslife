@@ -275,6 +275,10 @@ export const VEHICLE = {
   /** At 100 damage: engine force multiplier and a constant steering pull (rad). */
   damagedEngineFactor: 0.45,
   damagedSteerPull: 0.08,
+  /** Crumple damage: dent radius and depth (m) for the hardest hit, and the most any spot dents. */
+  dentRadius: 0.75,
+  dentDepth: 0.18,
+  maxDent: 0.32,
   /** How close (m) the player must be to any side of the car's body to get in. */
   enterDistance: 3,
 } as const;
@@ -456,6 +460,14 @@ export const TEST_SCENES = {
   bridge: { street: 'The Embarcadero', near: [1450, 520] as [number, number] },
   /** The police car starts this far behind the player. */
   policeBehind: 22,
+} as const;
+
+/** Hijacking cars from traffic (vehicles/Hijack.tsx). */
+export const HIJACK = {
+  /** Stop within this distance (m) of a car… */
+  range: 8,
+  /** …going slower than this (m/s). */
+  maxSpeed: 4,
 } as const;
 
 export const CHASE_CAMERA = {

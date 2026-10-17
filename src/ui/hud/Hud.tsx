@@ -1,6 +1,7 @@
 import './hud.css';
 import { DriftScore } from './DriftScore';
 import { Gauges } from './Gauges';
+import { HijackPrompt } from './HijackPrompt';
 import { Minimap } from './Minimap';
 import { Speedometer } from './Speedometer';
 import { Toasts } from './Toasts';
@@ -27,6 +28,7 @@ export function Hud({ touch }: { touch: boolean }) {
         <Minimap size={touch ? 112 : 150} />
       </div>
       <div className="hud-zone hud-bc">
+        <HijackPrompt touch={touch} />
         <Gauges />
       </div>
       <div className="hud-zone hud-br">

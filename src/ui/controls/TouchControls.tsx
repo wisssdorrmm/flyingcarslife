@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useGame } from '../../game/store/game';
+import { useHijack } from '../../game/vehicles/hijackState';
 import { input, pressAction, releaseAction, type Action } from '../../game/systems/input';
 import '../hud/hud.css';
 
@@ -24,7 +25,8 @@ export function TouchControls() {
   useEffect(
     () => () => {
       input.touchMove = { x: 0, y: 0, active: false };
-      for (const a of ['jump', 'attack', 'sprint', 'flyDown'] as const) releaseAction(a);
+      for (const a of ['jump', 'attack', 'sprint', 'flyDown', 'interact'] as const)
+        releaseAction(a);
     },
     [],
   );
@@ -70,9 +72,15 @@ export function TouchControls() {
     },
   });
   const flying = useGame((s) => s.vehicleHud?.altitude !== undefined);
+  const hijack = useHijack((s) => s.target);
 
   return (
     <div className="tc-layer">
+      {hijack && (
+        <button className="tc-btn tc-hijack" {...action('interact')}>
+          {hijack.label.toUpperCase()}
+        </button>
+      )}
       <div className="tc-left">
         <button {...pad('left')} aria-label="Steer left">
           ◀

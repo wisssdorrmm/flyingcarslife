@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useCity } from '../../game/city/cityData';
 import { currentPose, useNav } from '../../game/store/nav';
+import { usePlayerCar } from '../../game/store/playerCar';
 import { cityMapLayer, MAP_COLORS, MAP_SCALE } from '../map/cityMapLayer';
 import { formatDistance } from '../map/format';
 
@@ -63,6 +64,24 @@ export function Minimap({ size = SIZE }: { size?: number }) {
         nav.route.forEach((p, i) =>
           i ? ctx.lineTo(sx(p.x), sy(p.z)) : ctx.moveTo(sx(p.x), sy(p.z)),
         );
+        ctx.stroke();
+      }
+      // Where the flying car was left (after hijacking another car).
+      const parked = usePlayerCar.getState().left.find((c) => c.canFly);
+      if (parked) {
+        let px = sx(parked.position[0]);
+        let py = sy(parked.position[2]);
+        const d = Math.hypot(px, py);
+        if (d > r - 10) {
+          px *= (r - 10) / d;
+          py *= (r - 10) / d;
+        }
+        ctx.fillStyle = MAP_COLORS.route;
+        ctx.strokeStyle = '#071b18';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(px, py, 6, 0, Math.PI * 2);
+        ctx.fill();
         ctx.stroke();
       }
       if (nav.waypoint) {
