@@ -530,7 +530,7 @@ export const BILLBOARDS = {
 /** Advertiser-owned buildings (src/game/ads/BuildingAds.tsx, data in src/data/building-ads.json). */
 export const BUILDING_ADS = {
   /** How many ad buildings are drawn at once (nearest first), by quality tier. */
-  visible: { low: 8, medium: 14, high: 22, ultra: 30 },
+  visible: { low: 12, medium: 18, high: 26, ultra: 34 },
   /** The details card shows for an owned building this close (m). */
   cardRange: 60,
   /** Facade banners start this high above the street (clear of shopfronts) (m). */

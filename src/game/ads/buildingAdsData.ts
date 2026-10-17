@@ -1,7 +1,8 @@
 /**
  * Who owns which ad building: bookings from src/data/building-ads.json (same shape the future
  * backend will serve). Entries with a building_id take that building; entries without one (the
- * owner's own brands) go on the most prominent buildings nobody booked. The rest are "available".
+ * owner's own brands) rotate across every building nobody booked, with every fourth one shown as
+ * "available".
  */
 import { create } from 'zustand';
 import ads from '../../data/building-ads.json';
@@ -34,13 +35,15 @@ export function assignBuildingAds(buildings: AdBuilding[]): AdPlacement[] {
   );
   const byId = new Map(live.filter((a) => a.building_id).map((a) => [a.building_id, a]));
   const house = live.filter((a) => !a.building_id);
-  let h = 0;
-  // Buildings come ranked by prominence from the generator.
+  let free = 0;
+  // Buildings come ranked by prominence. Unbooked ones carry the owner's brands in turn, with
+  // every fourth one advertising that it's available.
   return buildings.map((b) => {
     const booked = byId.get(b.id);
     if (booked) return { building: b, ad: booked };
-    if (h < house.length) return { building: b, ad: house[h++]! };
-    return { building: b, ad: null };
+    const k = free++;
+    if (!house.length || k % 4 === 3) return { building: b, ad: null };
+    return { building: b, ad: house[(k - Math.floor(k / 4)) % house.length]! };
   });
 }
 

@@ -341,7 +341,7 @@ async function main(): Promise<void> {
   const candidates: AdBuilding[] = [];
   const scores = new Map<string, number>();
   for (const b of buildings) {
-    if (b.height < 14) continue;
+    if (b.height < 8) continue;
     const ring = b.poly.outer;
     const side = signedAreaOf(ring) > 0 ? 1 : -1;
     let best: { a: Pt; c: Pt; n: Pt; len: number; road: Road } | null = null;
@@ -349,7 +349,7 @@ async function main(): Promise<void> {
       const a = ring[i]!;
       const c = ring[(i + 1) % ring.length]!;
       const len = Math.hypot(c[0] - a[0], c[1] - a[1]);
-      if (len < 11) continue;
+      if (len < 9) continue;
       const dx = (c[0] - a[0]) / len;
       const dz = (c[1] - a[1]) / len;
       const n: Pt = side > 0 ? [dz, -dx] : [-dz, dx];
@@ -381,9 +381,9 @@ async function main(): Promise<void> {
   for (const c of candidates) {
     const cx = (c.ax + c.bx) / 2;
     const cz = (c.az + c.bz) / 2;
-    if (adBuildings.some((o) => Math.hypot((o.ax + o.bx) / 2 - cx, (o.az + o.bz) / 2 - cz) < 110)) continue;
+    if (adBuildings.some((o) => Math.hypot((o.ax + o.bx) / 2 - cx, (o.az + o.bz) / 2 - cz) < 45)) continue;
     adBuildings.push(c);
-    if (adBuildings.length >= 80) break;
+    if (adBuildings.length >= 600) break;
   }
   lap(`ad buildings: ${adBuildings.length}`);
 
